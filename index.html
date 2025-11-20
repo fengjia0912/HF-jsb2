@@ -4,15 +4,1934 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>何峰-专用记事本</title>
-    
-    <!-- 引入CSS -->
-    <link rel="stylesheet" href="css/style.css">
-    
-    <!-- 引入外部库 -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS 客户端 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SortableJS -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --warning: #f8961e;
+            --info: #4895ef;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --urgent: #ff4d4d;
+            --important: #ff9f1c;
+            --normal: #2ec4b6;
+            --low: #cbf3f0;
+            --background: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        /* 登录界面样式 */
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--card-bg);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            width: 400px;
+            max-width: 90%;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(67, 97, 238, 0.2);
+        }
+        
+        .login-title {
+            font-size: 24px;
+            color: var(--dark);
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        
+        .login-form {
+            width: 100%;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .login-btn:hover {
+            background-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+        
+        .login-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* 主应用样式 */
+        .app-container {
+            display: none;
+            width: 100%;
+            max-width: 1600px;
+            padding: 20px;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(67, 97, 238, 0.3);
+        }
+        
+        .logout-btn {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            margin-left: 10px;
+        }
+        
+        .logout-btn:hover {
+            background-color: #d11a2a;
+            transform: translateY(-2px);
+        }
+        
+        .logout-btn:active {
+            transform: translateY(0);
+        }
+        
+        .tabs-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background-color: var(--card-bg);
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            transition: all 0.3s;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        
+        .tab.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            position: relative;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary);
+        }
+        
+        /* 改进后的筛选容器样式 */
+        .filter-container {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background-color: var(--card-bg);
+            padding: 12px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 120px;
+        }
+        
+        .filter-group label {
+            font-size: 12px;
+            color: var(--gray);
+            font-weight: 500;
+        }
+        
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 120px;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+        }
+        
+        .filter-date {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+        }
+        
+        .filter-date:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+        }
+        
+        .filter-btn {
+            padding: 8px 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn:hover {
+            background-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+        
+        .filter-btn:active {
+            transform: translateY(0);
+        }
+        
+        .filter-btn.secondary {
+            background-color: var(--light);
+            color: var(--dark);
+            border: 1px solid var(--border);
+        }
+        
+        .filter-btn.secondary:hover {
+            background-color: #e9ecef;
+        }
+        
+        .filter-status {
+            font-size: 12px;
+            color: var(--gray);
+            margin-left: 10px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            align-self: flex-end;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            height: calc(100vh - 180px);
+            overflow: hidden;
+        }
+        
+        .content-area {
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .quadrant-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .quadrant {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .quadrant::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+        }
+        
+        .quadrant-1::before {
+            background-color: var(--urgent);
+        }
+        
+        .quadrant-2::before {
+            background-color: var(--important);
+        }
+        
+        .quadrant-3::before {
+            background-color: var(--normal);
+        }
+        
+        .quadrant-4::before {
+            background-color: var(--low);
+        }
+        
+        .quadrant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+        }
+        
+        .quadrant-title {
+            font-weight: 600;
+            font-size: 18px;
+            margin: 0;
+        }
+        
+        .quadrant-1 .quadrant-title {
+            color: var(--urgent);
+        }
+        
+        .quadrant-2 .quadrant-title {
+            color: var(--important);
+        }
+        
+        .quadrant-3 .quadrant-title {
+            color: var(--normal);
+        }
+        
+        .quadrant-4 .quadrant-title {
+            color: var(--gray);
+        }
+        
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .task-list.uncompleted {
+            margin-bottom: 15px;
+        }
+        
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 10px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            position: relative;
+            background-color: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--border);
+        }
+        
+        .task-item:hover {
+            background-color: rgba(248, 249, 250, 0.9);
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .task-item.completed {
+            opacity: 0.7;
+            background-color: rgba(248, 249, 250, 0.5);
+            order: 1;
+        }
+        
+        .task-item.completed .task-text {
+            text-decoration: line-through;
+            color: var(--gray);
+        }
+        
+        .task-checkbox {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+        
+        .task-text {
+            flex: 1;
+            font-size: 15px;
+            padding-right: 10px;
+            word-break: break-word;
+        }
+        
+        .task-date {
+            font-size: 11px;
+            color: var(--gray);
+            position: absolute;
+            right: 10px;
+            top: 5px;
+        }
+        
+        .task-priority {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .priority-1 {
+            background-color: var(--urgent);
+        }
+        
+        .priority-2 {
+            background-color: var(--important);
+        }
+        
+        .priority-3 {
+            background-color: var(--normal);
+        }
+        
+        .priority-4 {
+            background-color: var(--low);
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .task-item:hover .task-actions {
+            opacity: 1;
+        }
+        
+        .task-action {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px;
+            transition: all 0.2s;
+        }
+        
+        .task-action:hover {
+            color: var(--primary);
+            transform: scale(1.2);
+        }
+        
+        .add-task {
+            display: flex;
+            margin-top: 15px;
+        }
+        
+        .add-task-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 6px 0 0 6px;
+            font-size: 14px;
+            outline: none;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+        }
+        
+        .add-task-input:focus {
+            border-color: var(--primary);
+        }
+        
+        .add-task-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 15px;
+            border-radius: 0 6px 6px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .add-task-btn:hover {
+            background-color: var(--secondary);
+        }
+        
+        /* 自动完成建议框 */
+        .suggestions-container {
+            position: relative;
+            width: 100%;
+        }
+        
+        .suggestions-list {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            display: none;
+            margin-bottom: 5px;
+        }
+        
+        .suggestions-list.show {
+            display: block;
+        }
+        
+        .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .suggestion-item:hover {
+            background-color: var(--light);
+        }
+        
+        .suggestion-edit {
+            color: var(--gray);
+            cursor: pointer;
+            padding: 2px;
+        }
+        
+        .suggestion-edit:hover {
+            color: var(--primary);
+        }
+        
+        /* 侧边栏样式 */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .stats-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        
+        .stats-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 15px 0;
+            color: var(--dark);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+        
+        .summary {
+            margin-top: 15px;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .summary-label {
+            color: var(--gray);
+        }
+        
+        .summary-value {
+            font-weight: 600;
+        }
+        
+        .actions-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .action-btn {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .delete-selected {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .delete-completed {
+            background-color: var(--warning);
+            color: white;
+        }
+        
+        .clear-all {
+            background-color: var(--gray);
+            color: white;
+            grid-column: span 2;
+        }
+        
+        .restore-deleted {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .action-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .priority-selector {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .priority-option {
+            flex: 1;
+            padding: 5px;
+            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        
+        .priority-option:hover {
+            transform: translateY(-2px);
+        }
+        
+        .priority-option.selected {
+            color: white;
+            border-color: transparent;
+            transform: translateY(-2px);
+        }
+        
+        .priority-option[data-priority="1"].selected {
+            background-color: var(--urgent);
+        }
+        
+        .priority-option[data-priority="2"].selected {
+            background-color: var(--important);
+        }
+        
+        .priority-option[data-priority="3"].selected {
+            background-color: var(--normal);
+        }
+        
+        .priority-option[data-priority="4"].selected {
+            background-color: var(--low);
+            color: var(--dark);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 30px 0;
+            color: var(--gray);
+        }
+        
+        /* 列表视图样式 */
+        .list-view {
+            display: none;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            height: calc(100% - 40px);
+            overflow-y: auto;
+        }
+        
+        .list-view.active {
+            display: block;
+        }
+        
+        .list-header {
+            display: grid;
+            grid-template-columns: 30px 1fr 100px 100px 80px;
+            padding: 10px 15px;
+            font-weight: bold;
+            border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: 0;
+            background-color: var(--card-bg);
+            z-index: 1;
+        }
+        
+        .list-row {
+            display: grid;
+            grid-template-columns: 30px 1fr 100px 100px 80px;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+        
+        .list-row:hover {
+            background-color: var(--light);
+        }
+        
+        .list-row.completed {
+            opacity: 0.7;
+        }
+        
+        .list-row.completed .task-text {
+            text-decoration: line-through;
+            color: var(--gray);
+        }
+        
+        /* 数据分析视图样式 */
+        .analytics-view {
+            display: none;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            height: calc(100% - 40px);
+            overflow-y: auto;
+        }
+        
+        .analytics-view.active {
+            display: block;
+        }
+        
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .analytics-card {
+            background-color: var(--light);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .analytics-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 15px 0;
+            color: var(--dark);
+        }
+        
+        .big-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .trend-up {
+            color: #28a745;
+        }
+        
+        .trend-down {
+            color: #dc3545;
+        }
+        
+        .trend-neutral {
+            color: var(--gray);
+        }
+        
+        /* 操作记录视图样式 */
+        .log-view {
+            display: none;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            height: calc(100% - 40px);
+            overflow-y: auto;
+        }
+        
+        .log-view.active {
+            display: block;
+        }
+        
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .log-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .log-table th,
+        .log-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .log-table th {
+            background-color: var(--light);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        .log-checkbox {
+            margin-right: 10px;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .page-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: var(--card-bg);
+            transition: all 0.2s;
+        }
+        
+        .page-btn:hover {
+            background-color: var(--light);
+        }
+        
+        .page-btn.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .page-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .log-type {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .log-type.add {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+        
+        .log-type.delete {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+        
+        .log-type.complete {
+            background-color: rgba(0, 123, 255, 0.1);
+            color: #007bff;
+        }
+        
+        .log-type.edit {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+        
+        .log-type.restore {
+            background-color: rgba(108, 117, 125, 0.1);
+            color: var(--gray);
+        }
+        
+        .log-type.system {
+            background-color: rgba(33, 37, 41, 0.1);
+            color: var(--dark);
+        }
+        
+        /* 编辑模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: var(--shadow);
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .modal.show .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 0;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray);
+            transition: all 0.2s;
+        }
+        
+        .close-modal:hover {
+            color: var(--danger);
+            transform: rotate(90deg);
+        }
+        
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .modal-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .modal-btn:active {
+            transform: translateY(0);
+        }
+        
+        .modal-btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+        
+        .modal-btn-secondary {
+            background-color: var(--card-bg);
+            color: var(--dark);
+            border: 1px solid var(--border);
+        }
+        
+        /* 已删除任务模态框 */
+        .deleted-tasks-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
+        }
+        
+        .deleted-tasks-modal.show {
+            display: flex;
+        }
+        
+        .deleted-tasks-content {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 25px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .deleted-tasks-modal.show .deleted-tasks-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .deleted-tasks-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .deleted-task-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .deleted-task-info {
+            flex: 1;
+        }
+        
+        .deleted-task-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .restore-btn {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .restore-btn:hover {
+            background-color: #3aa8d8;
+            transform: translateY(-2px);
+        }
+        
+        .permanently-delete-btn {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .permanently-delete-btn:hover {
+            background-color: #d11a2a;
+            transform: translateY(-2px);
+        }
+        
+        /* 昨日未完成任务通知 */
+        .yesterday-tasks-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            max-width: 400px;
+            display: none;
+            transform: translateX(20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .yesterday-tasks-notification.show {
+            display: block;
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .yesterday-tasks-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .yesterday-tasks-title {
+            font-weight: bold;
+            color: var(--warning);
+        }
+        
+        .close-notification {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--gray);
+            transition: all 0.2s;
+        }
+        
+        .close-notification:hover {
+            color: var(--danger);
+            transform: rotate(90deg);
+        }
+        
+        .yesterday-tasks-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .yesterday-task-item {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        /* 拖拽样式 */
+        .task-item.dragging {
+            opacity: 0.5;
+            background-color: rgba(67, 97, 238, 0.1);
+            border: 1px dashed var(--primary);
+        }
+        
+        .task-item.drag-over {
+            background-color: rgba(67, 97, 238, 0.05);
+            border: 1px dashed var(--primary);
+        }
+        
+        /* 图片管理视图样式 */
+        .images-view {
+            display: none;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            height: calc(100% - 40px);
+            overflow-y: auto;
+        }
+        
+        .images-view.active {
+            display: block;
+        }
+        
+        .images-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary);
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: var(--gray);
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            font-size: 16px;
+            color: var(--gray);
+            margin-bottom: 10px;
+        }
+        
+        .upload-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background-color: var(--secondary);
+        }
+        
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .image-card {
+            background-color: var(--light);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .image-container {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            overflow: hidden;
+        }
+        
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            max-width: 200px;
+        }
+        
+        .image-info {
+            padding: 10px;
+        }
+        
+        .image-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .image-date {
+            font-size: 12px;
+            color: var(--gray);
+        }
+        
+        .image-size {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 3px;
+        }
+        
+        .image-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+        
+        .image-action {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .image-action:hover {
+            color: var(--primary);
+        }
+        
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .image-modal.show {
+            display: flex;
+        }
+        
+        .image-modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+        
+        .image-modal-content img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        
+        .image-modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .image-search {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .image-search-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+        }
+        
+        .image-search-input:focus {
+            border-color: var(--primary);
+        }
+        
+        .image-search-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .image-search-btn:hover {
+            background-color: var(--secondary);
+        }
+        
+        /* 文件夹视图样式 */
+        .folders-view {
+            display: none;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            height: calc(100% - 40px);
+            overflow-y: auto;
+        }
+        
+        .folders-view.active {
+            display: block;
+        }
+        
+        .folders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .folders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .folder-card {
+            background-color: var(--light);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .folder-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .folder-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .folder-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin: 0;
+        }
+        
+        .folder-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .folder-action {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .folder-action:hover {
+            color: var(--primary);
+        }
+        
+        .folder-info {
+            font-size: 12px;
+            color: var(--gray);
+        }
+        
+        .folder-info-item {
+            margin-bottom: 5px;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs-container {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .filter-container {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+            
+            .filter-select, .filter-date {
+                width: 100%;
+            }
+            
+            .filter-buttons {
+                align-self: stretch;
+                justify-content: flex-end;
+            }
+            
+            .images-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            
+            .folders-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .quadrant-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .clear-all {
+                grid-column: span 1;
+            }
+            
+            .list-header, .list-row {
+                grid-template-columns: 30px 1fr 80px;
+            }
+            
+            .list-header .priority, .list-row .priority {
+                display: none;
+            }
+            
+            .task-date {
+                position: static;
+                display: block;
+                margin-top: 5px;
+            }
+            
+            .images-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            
+            .folders-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 20px;
+            }
+            
+            .modal-content {
+                padding: 15px;
+            }
+            
+            .deleted-tasks-content {
+                padding: 15px;
+            }
+            
+            .deleted-task-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .deleted-task-actions {
+                align-self: flex-end;
+            }
+            
+            .images-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+        }
+        
+        /* 消息提示区 */
+        #message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            display: none;
+        }
+        
+        #message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        #message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* 新增样式：图片分类管理 */
+        .image-categories {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .category-tag {
+            padding: 5px 10px;
+            background-color: var(--light);
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .category-tag:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .category-tag.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .image-category {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+        
+        /* 新增样式：列表视图归类 */
+        .list-group-header {
+            background-color: var(--light);
+            padding: 10px 15px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border);
+            margin-top: 10px;
+        }
+        
+        .list-group-header:first-child {
+            margin-top: 0;
+        }
+        
+        .list-sort-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .sort-btn {
+            padding: 6px 12px;
+            background-color: var(--light);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .sort-btn:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .sort-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        /* 新增样式：自定义标签管理 */
+        .custom-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .custom-tag {
+            display: flex;
+            align-items: center;
+            background-color: var(--light);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .custom-tag:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .custom-tag.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .custom-tag-edit {
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        
+        .custom-tag-edit:hover {
+            opacity: 1;
+        }
+        
+        .add-tag-btn {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .add-tag-btn:hover {
+            background-color: #3aa8d8;
+        }
+        
+        /* 新增样式：紧凑的上传按钮 */
+        .compact-upload-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .compact-upload-btn:hover {
+            background-color: var(--secondary);
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .filter-container {
+                padding: 10px;
+            }
+            
+            .filter-group {
+                min-width: 100px;
+            }
+            
+            .filter-select, .filter-date {
+                min-width: 100px;
+            }
+            
+            .task-text {
+                font-size: 14px;
+            }
+            
+            .quadrant-title {
+                font-size: 16px;
+            }
+            
+            .tab {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+            
+            .upload-btn {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+            
+            .compact-upload-btn {
+                padding: 5px 10px;
+                font-size: 11px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .filter-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+            
+            .filter-buttons {
+                justify-content: center;
+            }
+            
+            .tab {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            
+            .upload-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            
+            .compact-upload-btn {
+                padding: 4px 8px;
+                font-size: 10px;
+            }
+        }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-4 flex items-center justify-center">
     <!-- 登录界面 -->
@@ -80,7 +1999,7 @@
                 <div class="tab" data-view="log">操作记录</div>
             </div>
             
-            <!-- 筛选UI -->
+            <!-- 改进后的筛选UI -->
             <div class="filter-container">
                 <div class="filter-group">
                     <label for="quickDateFilter">时间范围</label>
@@ -468,6 +2387,17 @@
         </div>
     </div>
 
+    <!-- 昨日未完成任务通知 -->
+    <div class="yesterday-tasks-notification" id="yesterdayTasksNotification">
+        <div class="yesterday-tasks-header">
+            <div class="yesterday-tasks-title">昨日未完成任务</div>
+            <button class="close-notification" id="closeNotification">&times;</button>
+        </div>
+        <div class="yesterday-tasks-list" id="yesterdayTasksList">
+            <!-- 昨日未完成任务将在这里动态加载 -->
+        </div>
+    </div>
+
     <!-- 编辑建议内容模态框 -->
     <div class="modal" id="editSuggestionModal">
         <div class="modal-content">
@@ -518,6 +2448,12 @@
                         <!-- 自定义标签将通过JS动态加载 -->
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="editImageFolder">图片文件夹</label>
+                    <select id="editImageFolder" class="form-input">
+                        <!-- 文件夹将通过JS动态加载 -->
+                    </select>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="modal-btn modal-btn-secondary" id="cancelEditImage">取消</button>
@@ -550,17 +2486,3367 @@
         </div>
     </div>
 
+    <!-- 创建/编辑文件夹模态框 -->
+    <div class="modal" id="editFolderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="editFolderModalTitle">创建文件夹</h3>
+                <button class="close-modal" id="closeEditFolderModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editFolderName">文件夹名称</label>
+                    <input type="text" id="editFolderName" class="form-input" placeholder="输入文件夹名称">
+                </div>
+                <div class="form-group">
+                    <label for="editFolderDescription">文件夹描述</label>
+                    <textarea id="editFolderDescription" class="form-input" rows="3" placeholder="输入文件夹描述（可选）"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-secondary" id="cancelEditFolder">取消</button>
+                <button class="modal-btn modal-btn-primary" id="saveEditFolder">保存</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 消息提示区 -->
     <div id="message"></div>
 
-    <!-- 引入JavaScript文件 -->
-    <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/database.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/tasks.js"></script>
-    <script src="js/images.js"></script>
-    <script src="js/analytics.js"></script>
-    <script src="js/app.js"></script>
+    <script src="config.js"></script>
+    <script>
+        // 初始化变量
+        let tasks = [];
+        let deletedTasks = [];
+        let operationLogs = [];
+        let yesterdayUncompletedTasks = [];
+        let taskSuggestions = [];
+        let categories = {};
+        let images = [];
+        let folders = [];
+        let supabase = null;
+        
+        // 当前选中的优先级
+        let currentPriority = 1;
+        let currentView = 'quadrant';
+        let editingTaskId = null;
+        let editingSuggestionIndex = -1;
+        let editingImageId = null;
+        let editingFolderId = null;
+        let currentLogPage = 1;
+        const logPageSize = 10;
+        let inactivityTimer;
+        const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15分钟
+        
+        // 当前筛选状态
+        let currentFilter = {
+            startDate: null,
+            endDate: null,
+            quickFilter: 'today'
+        };
+        
+        // 列表视图排序方式
+        let listSortMethod = 'date';
+        
+        // 图片分类筛选
+        let imageCategoryFilter = 'all';
+        
+        // 图片懒加载观察器
+        let imageObserver = null;
+        
+        // 自定义标签
+        let customTags = [];
+        let editingTagId = null;
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化Supabase
+            initSupabase();
+            
+            // 初始化图片懒加载
+            initImageLazyLoading();
+            
+            // 检查登录状态
+            checkLoginStatus();
+            
+            // 设置当前日期
+            updateCurrentDate();
+            
+            // 加载自定义标签
+            loadCustomTags();
+            
+            // 加载文件夹数据
+            loadFolders();
+            
+            // 等待Chart.js加载完成后再初始化图表
+            waitForChartJS().then(() => {
+                initChart();
+                initAnalyticsCharts();
+            }).catch(error => {
+                console.error('无法加载Chart.js:', error);
+                // 即使图表无法加载，也要确保其他功能正常
+                document.querySelectorAll('.chart-container').forEach(container => {
+                    container.innerHTML = '<p>图表加载失败，请刷新页面重试</p>';
+                });
+            });
+            
+            // 更新任务统计
+            updateTaskStats();
+            
+            // 优先级选择器事件
+            document.querySelectorAll('.priority-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.priority-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    currentPriority = parseInt(this.dataset.priority);
+                });
+            });
+            
+            // 添加任务按钮事件
+            document.getElementById('addTaskBtn').addEventListener('click', addNewTask);
+            
+            // 各象限添加任务按钮事件
+            document.querySelectorAll('.add-task-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const quadrant = parseInt(this.dataset.quadrant);
+                    const input = this.previousElementSibling.querySelector('.add-task-input');
+                    const text = input.value.trim();
+                    
+                    if (text) {
+                        addTaskToQuadrant(text, quadrant);
+                        input.value = '';
+                        hideSuggestions(quadrant);
+                    } else {
+                        // 如果没有输入内容，创建一个空任务并打开编辑模态框
+                        createEmptyTask(quadrant);
+                    }
+                });
+            });
+            
+            // 各象限输入框回车事件
+            document.querySelectorAll('.add-task-input').forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        const btn = this.closest('.add-task').querySelector('.add-task-btn');
+                        const text = this.value.trim();
+                        const quadrant = parseInt(this.dataset.quadrant);
+                        
+                        if (text) {
+                            addTaskToQuadrant(text, quadrant);
+                            this.value = '';
+                            hideSuggestions(quadrant);
+                        } else {
+                            // 如果没有输入内容，创建一个空任务并打开编辑模态框
+                            createEmptyTask(quadrant);
+                        }
+                    }
+                });
+                
+                // 输入框获取焦点时显示建议
+                input.addEventListener('focus', function() {
+                    const quadrant = parseInt(this.dataset.quadrant);
+                    if (this.value.trim()) {
+                        showSuggestions(this.value, quadrant);
+                    }
+                });
+                
+                // 输入框输入时更新建议
+                input.addEventListener('input', function() {
+                    const quadrant = parseInt(this.dataset.quadrant);
+                    if (this.value.trim()) {
+                        showSuggestions(this.value, quadrant);
+                    } else {
+                        hideSuggestions(quadrant);
+                    }
+                });
+                
+                // 输入框失去焦点时隐藏建议
+                input.addEventListener('blur', function() {
+                    setTimeout(() => {
+                        const quadrant = parseInt(this.dataset.quadrant);
+                        hideSuggestions(quadrant);
+                    }, 200);
+                });
+            });
+            
+            // 主输入框事件
+            const mainInput = document.getElementById('newTaskInput');
+            mainInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addNewTask();
+                }
+            });
+            
+            mainInput.addEventListener('focus', function() {
+                if (this.value.trim()) {
+                    showSuggestions(this.value, null);
+                }
+            });
+            
+            mainInput.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    showSuggestions(this.value, null);
+                } else {
+                    hideSuggestions(null);
+                }
+            });
+            
+            mainInput.addEventListener('blur', function() {
+                setTimeout(() => {
+                    hideSuggestions(null);
+                }, 200);
+            });
+            
+            // 任务复选框事件
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('task-checkbox')) {
+                    const taskItem = e.target.closest('.task-item, .list-row');
+                    if (taskItem) {
+                        const taskId = parseInt(taskItem.dataset.id);
+                        const task = tasks.find(t => t.id === taskId);
+                        if (task) {
+                            task.completed = e.target.checked;
+                            taskItem.classList.toggle('completed', task.completed);
+                            
+                            // 更新数据库
+                            updateTaskInDatabase(task);
+                            
+                            // 记录操作日志
+                            logOperation(task.completed ? 'complete' : 'incomplete', 
+                                         `标记任务为${task.completed ? '已完成' : '未完成'}："${task.text}"（象限：${getQuadrantName(task.quadrant)}）`);
+                            
+                            updateTaskStats();
+                            resetInactivityTimer();
+                        }
+                    }
+                }
+            });
+            
+            // 删除按钮事件
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-btn')) {
+                    const taskItem = e.target.closest('.task-item, .list-row');
+                    if (taskItem) {
+                        const taskId = parseInt(taskItem.dataset.id);
+                        deleteTask(taskId);
+                        resetInactivityTimer();
+                    }
+                }
+            });
+            
+            // 编辑按钮事件
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('edit-btn')) {
+                    const taskItem = e.target.closest('.task-item, .list-row');
+                    if (taskItem) {
+                        const taskId = parseInt(taskItem.dataset.id);
+                        openEditModal(taskId);
+                        resetInactivityTimer();
+                    }
+                }
+            });
+            
+            // 批量操作按钮事件
+            document.getElementById('deleteSelectedTasksBtn').addEventListener('click', deleteSelectedTasks);
+            document.getElementById('deleteCompletedTasksBtn').addEventListener('click', deleteCompletedTasks);
+            document.getElementById('clearAllTasksBtn').addEventListener('click', clearAllTasks);
+            document.getElementById('restoreDeletedBtn').addEventListener('click', showDeletedTasks);
+            
+            // 标签切换事件
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    currentView = this.dataset.view;
+                    switchView(currentView);
+                    saveViewPreference();
+                    resetInactivityTimer();
+                });
+            });
+            
+            // 模态框事件
+            document.getElementById('closeModal').addEventListener('click', closeEditModal);
+            document.getElementById('cancelEdit').addEventListener('click', closeEditModal);
+            document.getElementById('saveEdit').addEventListener('click', saveEditedTask);
+            
+            // 已删除任务模态框事件
+            document.getElementById('closeDeletedModal').addEventListener('click', closeDeletedTasksModal);
+            document.getElementById('closeDeletedModalBtn').addEventListener('click', closeDeletedTasksModal);
+            document.getElementById('restoreSelectedTasksBtn').addEventListener('click', restoreSelectedTasks);
+            document.getElementById('clearDeletedSearchBtn').addEventListener('click', clearDeletedTasksSearch);
+            
+            // 搜索已删除任务
+            document.getElementById('searchDeletedTasks').addEventListener('input', filterDeletedTasks);
+            
+            // 登录表单事件
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const password = document.getElementById('password').value;
+                const savedPassword = localStorage.getItem('userPassword') || '6858'; // 默认密码
+                if (password === savedPassword) {
+                    loginSuccess();
+                } else {
+                    alert('密码错误，请重新输入');
+                }
+            });
+            
+            // 修改密码按钮事件
+            document.getElementById('changePasswordBtn').addEventListener('click', function() {
+                showModal('changePasswordModal');
+            });
+            
+            // 关闭修改密码模态框
+            document.getElementById('closeChangePasswordModal').addEventListener('click', function() {
+                hideModal('changePasswordModal');
+            });
+            
+            document.getElementById('cancelChangePassword').addEventListener('click', function() {
+                hideModal('changePasswordModal');
+            });
+            
+            // 保存新密码
+            document.getElementById('saveNewPassword').addEventListener('click', function() {
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                
+                const savedPassword = localStorage.getItem('userPassword') || '6858'; // 默认密码
+                
+                if (currentPassword !== savedPassword) {
+                    alert('当前密码不正确');
+                    return;
+                }
+                
+                if (newPassword !== confirmPassword) {
+                    alert('新密码和确认密码不匹配');
+                    return;
+                }
+                
+                if (newPassword.length < 4) {
+                    alert('密码长度不能少于4位');
+                    return;
+                }
+                
+                localStorage.setItem('userPassword', newPassword);
+                alert('密码修改成功，请使用新密码登录');
+                hideModal('changePasswordModal');
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                
+                // 记录操作日志
+                logOperation('system', '用户修改了登录密码');
+            });
+            
+            // 退出登录按钮事件
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                logout();
+            });
+            
+            // 快捷筛选变更事件
+            document.getElementById('quickDateFilter').addEventListener('change', function() {
+                applyQuickFilter();
+            });
+            
+            // 日期选择器事件
+            document.getElementById('startDate').addEventListener('change', function() {
+                const startDate = new Date(this.value);
+                const endDate = new Date(document.getElementById('endDate').value);
+                
+                if (startDate > endDate) {
+                    document.getElementById('endDate').value = this.value;
+                    currentFilter.endDate = new Date(this.value);
+                    currentFilter.endDate.setHours(23, 59, 59, 999);
+                }
+            });
+            
+            document.getElementById('endDate').addEventListener('change', function() {
+                const startDate = new Date(document.getElementById('startDate').value);
+                const endDate = new Date(this.value);
+                
+                if (endDate < startDate) {
+                    alert('结束日期不能早于开始日期');
+                    this.value = document.getElementById('startDate').value;
+                    currentFilter.endDate = new Date(this.value);
+                    currentFilter.endDate.setHours(23, 59, 59, 999);
+                }
+            });
+            
+            // 筛选按钮事件
+            document.getElementById('applyDateFilterBtn').addEventListener('click', applyDateFilter);
+            document.getElementById('resetDateFilterBtn').addEventListener('click', resetDateFilter);
+            
+            // 操作类型筛选变更事件
+            document.getElementById('logType').addEventListener('change', function() {
+                loadOperationLogs();
+            });
+            
+            // 清除日志按钮事件
+            document.getElementById('clearLogsBtn').addEventListener('click', clearLogs);
+            
+            // 全选日志复选框事件
+            document.getElementById('selectAllLogs').addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('#logList .log-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+            });
+            
+            // 关闭昨日任务通知
+            document.getElementById('closeNotification').addEventListener('click', function() {
+                hideNotification('yesterdayTasksNotification');
+            });
+            
+            // 编辑建议内容模态框事件
+            document.getElementById('closeEditSuggestionModal').addEventListener('click', function() {
+                hideModal('editSuggestionModal');
+            });
+            
+            document.getElementById('cancelEditSuggestion').addEventListener('click', function() {
+                hideModal('editSuggestionModal');
+            });
+            
+            document.getElementById('saveEditSuggestion').addEventListener('click', function() {
+                saveEditedSuggestion();
+            });
+            
+            // 四象限标题点击事件 - 展开/折叠任务列表
+            document.querySelectorAll('.quadrant-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    const quadrant = this.dataset.quadrant;
+                    const container = document.getElementById(`taskContainer${quadrant}`);
+                    const toggleIcon = this.querySelector('.toggle-icon');
+                    
+                    if (container.style.display === 'none') {
+                        container.style.display = 'block';
+                        toggleIcon.textContent = '▼';
+                    } else {
+                        container.style.display = 'none';
+                        toggleIcon.textContent = '▶';
+                    }
+                });
+            });
+            
+            // 图片管理相关事件
+            document.getElementById('uploadBtn').addEventListener('click', function() {
+                document.getElementById('fileInput').click();
+            });
+            
+            document.getElementById('fileInput').addEventListener('change', function(e) {
+                handleImageUpload(e.target.files);
+            });
+            
+            document.getElementById('uploadArea').addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+            
+            document.getElementById('uploadArea').addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+            
+            document.getElementById('uploadArea').addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                handleImageUpload(e.dataTransfer.files);
+            });
+            
+            document.getElementById('imageSearchBtn').addEventListener('click', function() {
+                searchImages();
+            });
+            
+            document.getElementById('imageSearchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchImages();
+                }
+            });
+            
+            document.getElementById('closeImageModal').addEventListener('click', function() {
+                hideModal('imageModal');
+            });
+            
+            // 编辑图片信息模态框事件
+            document.getElementById('closeEditImageModal').addEventListener('click', function() {
+                hideModal('editImageModal');
+            });
+            
+            document.getElementById('cancelEditImage').addEventListener('click', function() {
+                hideModal('editImageModal');
+            });
+            
+            document.getElementById('saveEditImage').addEventListener('click', function() {
+                saveEditedImage();
+            });
+            
+            // 列表视图排序按钮事件
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    listSortMethod = this.dataset.sort;
+                    renderListView();
+                });
+            });
+            
+            // 自定义标签相关事件
+            document.getElementById('addTagBtn').addEventListener('click', function() {
+                openEditTagModal();
+            });
+            
+            document.getElementById('addImageTagBtn').addEventListener('click', function() {
+                openEditTagModal();
+            });
+            
+            document.getElementById('closeEditTagModal').addEventListener('click', function() {
+                hideModal('editTagModal');
+            });
+            
+            document.getElementById('cancelEditTag').addEventListener('click', function() {
+                hideModal('editTagModal');
+            });
+            
+            document.getElementById('saveEditTag').addEventListener('click', function() {
+                saveEditedTag();
+            });
+            
+            // 文件夹相关事件
+            document.getElementById('createFolderBtn').addEventListener('click', function() {
+                openEditFolderModal();
+            });
+            
+            document.getElementById('closeEditFolderModal').addEventListener('click', function() {
+                hideModal('editFolderModal');
+            });
+            
+            document.getElementById('cancelEditFolder').addEventListener('click', function() {
+                hideModal('editFolderModal');
+            });
+            
+            document.getElementById('saveEditFolder').addEventListener('click', function() {
+                saveEditedFolder();
+            });
+            
+            // 加载保存的数据
+            loadViewPreference();
+            
+            // 初始化操作记录
+            loadOperationLogs();
+            
+            // 设置不活动计时器
+            setupInactivityTimer();
+            
+            // 添加用户活动监听器
+            document.addEventListener('mousemove', resetInactivityTimer);
+            document.addEventListener('keypress', resetInactivityTimer);
+            document.addEventListener('click', resetInactivityTimer);
+            document.addEventListener('scroll', resetInactivityTimer);
+            
+            // ESC键退出登录
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    // 如果任何模态框是打开的，先关闭它
+                    if (document.querySelector('.modal.show')) {
+                        const modalId = document.querySelector('.modal.show').id;
+                        hideModal(modalId);
+                        e.preventDefault();
+                    } else if (document.getElementById('yesterdayTasksNotification').classList.contains('show')) {
+                        hideNotification('yesterdayTasksNotification');
+                        e.preventDefault();
+                    } else if (document.getElementById('appContainer').style.display === 'block') {
+                        logout();
+                        e.preventDefault();
+                    }
+                }
+                
+                // Enter键确认操作
+                if (e.key === 'Enter') {
+                    const activeElement = document.activeElement;
+                    if (activeElement.classList.contains('modal-btn-primary')) {
+                        activeElement.click();
+                        e.preventDefault();
+                    }
+                }
+            });
+            
+            // 初始化拖拽功能
+            initDragAndDrop();
+        });
+        
+        // 初始化图片懒加载
+        function initImageLazyLoading() {
+            // 检查浏览器是否支持 Intersection Observer API
+            if ('IntersectionObserver' in window) {
+                imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            img.src = img.dataset.src;
+                            img.classList.remove('lazy');
+                            imageObserver.unobserve(img);
+                        }
+                    });
+                }, {
+                    rootMargin: '50px 0px', // 提前50px开始加载
+                    threshold: 0.01
+                });
+            }
+        }
+        
+        // 创建空任务并打开编辑模态框
+        function createEmptyTask(quadrant) {
+            // 创建新任务
+            const newTask = {
+                text: '',
+                priority: currentPriority,
+                completed: false,
+                quadrant: quadrant,
+                category: getCategoryByPriority(currentPriority),
+                createdAt: new Date().toISOString()
+            };
+            
+            // 保存到数据库
+            saveTaskToDatabase(newTask).then(savedTask => {
+                if (savedTask) {
+                    tasks.push(savedTask);
+                    renderTask(savedTask);
+                    
+                    // 打开编辑模态框
+                    openEditModal(savedTask.id);
+                    
+                    // 记录操作日志
+                    logOperation('add', `创建新任务（象限：${getQuadrantName(quadrant)}）`);
+                    
+                    updateTaskStats();
+                }
+            });
+        }
+        
+        // 图片管理功能
+        function handleImageUpload(files) {
+            if (!files || files.length === 0) return;
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (!file.type.match('image.*')) {
+                    alert('只能上传图片文件');
+                    continue;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageData = e.target.result;
+                    
+                    // 创建图片对象
+                    const newImage = {
+                        name: file.name,
+                        data: imageData,
+                        description: '',
+                        category: 'all',
+                        folder: 'default',
+                        size: file.size,
+                        uploadedAt: new Date().toISOString()
+                    };
+                    
+                    // 保存到数据库
+                    saveImageToDatabase(newImage).then(savedImage => {
+                        if (savedImage) {
+                            images.push(savedImage);
+                            renderImage(savedImage);
+                            
+                            // 记录操作日志
+                            logOperation('system', `上传图片：${file.name}`);
+                        }
+                    });
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            
+            // 清空文件输入
+            document.getElementById('fileInput').value = '';
+        }
+        
+        function renderImage(image) {
+            const imagesGrid = document.getElementById('imagesGrid');
+            
+            const imageCard = document.createElement('div');
+            imageCard.className = 'image-card';
+            imageCard.dataset.id = image.id;
+            imageCard.dataset.category = image.category;
+            
+            const uploadDate = new Date(image.uploadedAt).toLocaleDateString();
+            const categoryText = getCategoryNameById(image.category);
+            const sizeText = formatFileSize(image.size);
+            
+            // 使用 data-src 属性存储图片URL，实现懒加载
+            imageCard.innerHTML = `
+                <div class="image-container">
+                    <img data-src="${image.data}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org2000/svg' width='200' height='150' viewBox='0 0 200 150'%3E%3Crect width='200' height='150' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23999'%3E加载中...%3C/text%3E%3C/svg%3E" alt="${image.name}" class="lazy" loading="lazy">
+                </div>
+                <div class="image-info">
+                    <div class="image-title">${image.name}</div>
+                    <div class="image-date">${uploadDate}</div>
+                    <div class="image-size">${sizeText}</div>
+                    <div class="image-category">${categoryText}</div>
+                    <div class="image-actions">
+                        <button class="image-action view-image-btn">👁️</button>
+                        <button class="image-action edit-image-btn">✏️</button>
+                        <button class="image-action delete-image-btn">🗑️</button>
+                    </div>
+                </div>
+            `;
+            
+            // 添加事件监听器
+            const viewBtn = imageCard.querySelector('.view-image-btn');
+            viewBtn.addEventListener('click', function() {
+                viewImage(image);
+            });
+            
+            const editBtn = imageCard.querySelector('.edit-image-btn');
+            editBtn.addEventListener('click', function() {
+                openEditImageModal(image.id);
+            });
+            
+            const deleteBtn = imageCard.querySelector('.delete-image-btn');
+            deleteBtn.addEventListener('click', function() {
+                deleteImage(image.id);
+            });
+            
+            imagesGrid.appendChild(imageCard);
+            
+            // 如果支持 Intersection Observer，则观察图片进行懒加载
+            const img = imageCard.querySelector('img');
+            if (imageObserver) {
+                imageObserver.observe(img);
+            } else {
+                // 如果不支持，直接加载图片
+                img.src = img.dataset.src;
+                img.classList.remove('lazy');
+            }
+        }
+        
+        function viewImage(image) {
+            document.getElementById('modalImage').src = image.data;
+            document.getElementById('modalImage').alt = image.name;
+            showModal('imageModal');
+        }
+        
+        function openEditImageModal(imageId) {
+            const image = images.find(img => img.id === imageId);
+            if (image) {
+                editingImageId = imageId;
+                document.getElementById('editImageName').value = image.name;
+                document.getElementById('editImageDescription').value = image.description || '';
+                
+                // 更新分类选择器
+                updateCategorySelectors();
+                document.getElementById('editImageCategory').value = image.category;
+                
+                // 更新文件夹选择器
+                updateFolderSelectors();
+                document.getElementById('editImageFolder').value = image.folder || 'default';
+                
+                showModal('editImageModal');
+            }
+        }
+        
+        function saveEditedImage() {
+            if (editingImageId !== null) {
+                const image = images.find(img => img.id === editingImageId);
+                if (image) {
+                    const oldName = image.name;
+                    const oldCategory = image.category;
+                    const oldFolder = image.folder;
+                    
+                    image.name = document.getElementById('editImageName').value;
+                    image.description = document.getElementById('editImageDescription').value;
+                    image.category = document.getElementById('editImageCategory').value;
+                    image.folder = document.getElementById('editImageFolder').value;
+                    
+                    // 保存到数据库
+                    saveImageToDatabase(image).then(savedImage => {
+                        if (savedImage) {
+                            // 记录操作日志
+                            let changes = [];
+                            if (oldName !== image.name) changes.push(`名称从"${oldName}"修改为"${image.name}"`);
+                            if (oldCategory !== image.category) changes.push(`分类从"${getCategoryNameById(oldCategory)}"修改为"${getCategoryNameById(image.category)}"`);
+                            if (oldFolder !== image.folder) changes.push(`文件夹从"${getFolderNameById(oldFolder)}"修改为"${getFolderNameById(image.folder)}"`);
+                            
+                            if (changes.length > 0) {
+                                logOperation('edit', `编辑图片信息：${changes.join('，')}`);
+                            }
+                            
+                            // 重新渲染图片
+                            document.querySelector(`.image-card[data-id="${editingImageId}"]`).remove();
+                            renderImage(image);
+                            
+                            // 应用分类筛选
+                            filterImagesByCategory();
+                            
+                            hideModal('editImageModal');
+                            editingImageId = null;
+                        }
+                    });
+                }
+            }
+        }
+        
+        function deleteImage(imageId) {
+            if (confirm('确定要删除这张图片吗？')) {
+                const imageIndex = images.findIndex(img => img.id === imageId);
+                if (imageIndex !== -1) {
+                    const image = images[imageIndex];
+                    
+                    // 从数据库删除
+                    deleteImageFromDatabase(imageId).then(success => {
+                        if (success) {
+                            // 记录操作日志
+                            logOperation('delete', `删除图片：${image.name}`);
+                            
+                            images.splice(imageIndex, 1);
+                            document.querySelector(`.image-card[data-id="${imageId}"]`).remove();
+                        }
+                    });
+                }
+            }
+        }
+        
+        function searchImages() {
+            const searchText = document.getElementById('imageSearchInput').value.toLowerCase();
+            const imageCards = document.querySelectorAll('.image-card');
+            
+            imageCards.forEach(card => {
+                const imageName = card.querySelector('.image-title').textContent.toLowerCase();
+                const imageCategory = card.dataset.category;
+                
+                const matchesSearch = imageName.includes(searchText);
+                const matchesCategory = imageCategoryFilter === 'all' || imageCategory === imageCategoryFilter;
+                
+                if (matchesSearch && matchesCategory) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+        
+        function filterImagesByCategory() {
+            const imageCards = document.querySelectorAll('.image-card');
+            const searchText = document.getElementById('imageSearchInput').value.toLowerCase();
+            
+            imageCards.forEach(card => {
+                const imageName = card.querySelector('.image-title').textContent.toLowerCase();
+                const imageCategory = card.dataset.category;
+                
+                const matchesSearch = imageName.includes(searchText);
+                const matchesCategory = imageCategoryFilter === 'all' || imageCategory === imageCategoryFilter;
+                
+                if (matchesSearch && matchesCategory) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+        
+        // 文件夹管理功能
+        function loadFolders() {
+            const savedFolders = localStorage.getItem('folders');
+            if (savedFolders) {
+                folders = JSON.parse(savedFolders);
+            } else {
+                // 初始化默认文件夹
+                folders = [
+                    {
+                        id: 'default',
+                        name: '默认文件夹',
+                        description: '系统默认文件夹',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        imageCount: 0,
+                        totalSize: 0
+                    }
+                ];
+                saveFolders();
+            }
+            
+            renderFolders();
+        }
+        
+        function saveFolders() {
+            localStorage.setItem('folders', JSON.stringify(folders));
+        }
+        
+        function renderFolders() {
+            const foldersGrid = document.getElementById('foldersGrid');
+            foldersGrid.innerHTML = '';
+            
+            if (folders.length === 0) {
+                foldersGrid.innerHTML = '<div class="empty-state">暂无文件夹</div>';
+                return;
+            }
+            
+            folders.forEach(folder => {
+                const folderCard = document.createElement('div');
+                folderCard.className = 'folder-card';
+                folderCard.dataset.id = folder.id;
+                
+                const createdDate = new Date(folder.createdAt).toLocaleString();
+                const updatedDate = new Date(folder.updatedAt).toLocaleString();
+                const sizeText = formatFileSize(folder.totalSize);
+                
+                folderCard.innerHTML = `
+                    <div class="folder-header">
+                        <h4 class="folder-name">${folder.name}</h4>
+                        <div class="folder-actions">
+                            <button class="folder-action edit-folder-btn">✏️</button>
+                            <button class="folder-action delete-folder-btn">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="folder-info">
+                        <div class="folder-info-item">创建时间: ${createdDate}</div>
+                        <div class="folder-info-item">最后修改: ${updatedDate}</div>
+                        <div class="folder-info-item">图片数量: ${folder.imageCount} 张</div>
+                        <div class="folder-info-item">总大小: ${sizeText}</div>
+                    </div>
+                `;
+                
+                // 添加事件监听器
+                const editBtn = folderCard.querySelector('.edit-folder-btn');
+                editBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    openEditFolderModal(folder.id);
+                });
+                
+                const deleteBtn = folderCard.querySelector('.delete-folder-btn');
+                deleteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    deleteFolder(folder.id);
+                });
+                
+                folderCard.addEventListener('click', function() {
+                    // 切换到图片管理视图并筛选该文件夹的图片
+                    currentView = 'images';
+                    document.querySelectorAll('.tab').forEach(tab => {
+                        tab.classList.remove('active');
+                        if (tab.dataset.view === 'images') {
+                            tab.classList.add('active');
+                        }
+                    });
+                    switchView('images');
+                    
+                    // 筛选该文件夹的图片
+                    imageCategoryFilter = folder.id;
+                    document.querySelectorAll('#imageTagsContainer .custom-tag').forEach(tag => {
+                        tag.classList.remove('active');
+                        if (tag.dataset.category === folder.id) {
+                            tag.classList.add('active');
+                        }
+                    });
+                    filterImagesByCategory();
+                });
+                
+                foldersGrid.appendChild(folderCard);
+            });
+        }
+        
+        function openEditFolderModal(folderId = null) {
+            editingFolderId = folderId;
+            
+            if (folderId) {
+                // 编辑现有文件夹
+                const folder = folders.find(f => f.id === folderId);
+                if (folder) {
+                    document.getElementById('editFolderModalTitle').textContent = '编辑文件夹';
+                    document.getElementById('editFolderName').value = folder.name;
+                    document.getElementById('editFolderDescription').value = folder.description || '';
+                }
+            } else {
+                // 创建新文件夹
+                document.getElementById('editFolderModalTitle').textContent = '创建文件夹';
+                document.getElementById('editFolderName').value = '';
+                document.getElementById('editFolderDescription').value = '';
+            }
+            
+            showModal('editFolderModal');
+        }
+        
+        function saveEditedFolder() {
+            const name = document.getElementById('editFolderName').value.trim();
+            const description = document.getElementById('editFolderDescription').value.trim();
+            
+            if (!name) {
+                alert('请输入文件夹名称');
+                return;
+            }
+            
+            if (editingFolderId) {
+                // 更新现有文件夹
+                const folderIndex = folders.findIndex(f => f.id === editingFolderId);
+                if (folderIndex !== -1) {
+                    folders[folderIndex].name = name;
+                    folders[folderIndex].description = description;
+                    folders[folderIndex].updatedAt = new Date().toISOString();
+                }
+            } else {
+                // 创建新文件夹
+                const newId = 'folder_' + Date.now();
+                folders.push({
+                    id: newId,
+                    name: name,
+                    description: description,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    imageCount: 0,
+                    totalSize: 0
+                });
+            }
+            
+            saveFolders();
+            renderFolders();
+            updateFolderSelectors();
+            hideModal('editFolderModal');
+            
+            // 记录操作日志
+            logOperation('system', `${editingFolderId ? '编辑' : '创建'}文件夹："${name}"`);
+        }
+        
+        function deleteFolder(folderId) {
+            if (folderId === 'default') {
+                alert('默认文件夹不能删除');
+                return;
+            }
+            
+            const folder = folders.find(f => f.id === folderId);
+            if (!folder) return;
+            
+            const confirmDelete = confirm(`确定要删除文件夹"${folder.name}"吗？`);
+            if (!confirmDelete) return;
+            
+            const deleteImages = confirm('是否同时删除文件夹内的所有图片？');
+            
+            if (deleteImages) {
+                // 删除文件夹及其内部图片
+                const folderImages = images.filter(img => img.folder === folderId);
+                folderImages.forEach(img => {
+                    deleteImageFromDatabase(img.id);
+                });
+                
+                // 从图片数组中移除
+                images = images.filter(img => img.folder !== folderId);
+                
+                // 重新渲染图片网格
+                document.getElementById('imagesGrid').innerHTML = '';
+                images.forEach(img => renderImage(img));
+                
+                logOperation('delete', `删除文件夹"${folder.name}"及其内部${folderImages.length}张图片`);
+            } else {
+                // 仅删除文件夹，将图片移动到默认文件夹
+                images.forEach(img => {
+                    if (img.folder === folderId) {
+                        img.folder = 'default';
+                        saveImageToDatabase(img);
+                    }
+                });
+                
+                logOperation('delete', `删除文件夹"${folder.name}"，图片已移动到默认文件夹`);
+            }
+            
+            // 从文件夹数组中移除
+            folders = folders.filter(f => f.id !== folderId);
+            saveFolders();
+            renderFolders();
+            updateFolderSelectors();
+        }
+        
+        function getFolderNameById(folderId) {
+            const folder = folders.find(f => f.id === folderId);
+            return folder ? folder.name : '默认文件夹';
+        }
+        
+        function updateFolderSelectors() {
+            // 更新图片编辑模态框的文件夹选择器
+            const imageFolderSelect = document.getElementById('editImageFolder');
+            imageFolderSelect.innerHTML = '';
+            
+            folders.forEach(folder => {
+                const option = document.createElement('option');
+                option.value = folder.id;
+                option.textContent = folder.name;
+                imageFolderSelect.appendChild(option);
+            });
+        }
+        
+        // 文件大小格式化函数
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 保存图片到数据库
+        async function saveImageToDatabase(image) {
+            if (!supabase) return null;
+            
+            try {
+                // 图片压缩和优化
+                const optimizedImageData = await optimizeImage(image.data);
+                
+                const imageData = {
+                    name: image.name,
+                    data: optimizedImageData,
+                    description: image.description,
+                    category: image.category,
+                    folder: image.folder || 'default',
+                    size: image.size || 0,
+                    uploaded_at: image.uploadedAt
+                };
+                
+                let result;
+                if (image.id) {
+                    // 更新现有图片
+                    result = await supabase
+                        .from('images')
+                        .update(imageData)
+                        .eq('id', image.id);
+                } else {
+                    // 创建新图片
+                    result = await supabase
+                        .from('images')
+                        .insert([imageData])
+                        .select();
+                    
+                    // 获取新创建的图片ID
+                    if (result.data && result.data.length > 0) {
+                        image.id = result.data[0].id;
+                    }
+                }
+                
+                if (result.error) {
+                    throw result.error;
+                }
+                
+                showMessage('图片已保存到云端', false);
+                return image;
+            } catch (error) {
+                console.error('保存图片到数据库失败:', error);
+                showMessage('同步图片到服务器失败', true);
+                return null;
+            }
+        }
+        
+        // 图片压缩和优化函数
+        function optimizeImage(imageData) {
+            return new Promise((resolve) => {
+                // 创建一个临时图片元素来获取图片尺寸
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 计算压缩后的尺寸（最大宽度800px）
+                    let width = img.width;
+                    let height = img.height;
+                    const maxWidth = 800;
+                    
+                    if (width > maxWidth) {
+                        height = (height * maxWidth) / width;
+                        width = maxWidth;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // 绘制图片到canvas
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // 尝试转换为WebP格式，如果不支持则使用JPEG
+                    try {
+                        // 检查浏览器是否支持WebP
+                        const supportsWebP = document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp') === 0;
+                        
+                        if (supportsWebP) {
+                            // 使用WebP格式，质量80%
+                            resolve(canvas.toDataURL('image/webp', 0.8));
+                        } else {
+                            // 使用JPEG格式，质量80%
+                            resolve(canvas.toDataURL('image/jpeg', 0.8));
+                        }
+                    } catch (e) {
+                        // 如果转换失败，返回原始数据
+                        console.warn('图片格式转换失败，使用原始格式:', e);
+                        resolve(imageData);
+                    }
+                };
+                
+                img.onerror = function() {
+                    // 如果图片加载失败，返回原始数据
+                    console.warn('图片加载失败，使用原始数据');
+                    resolve(imageData);
+                };
+                
+                img.src = imageData;
+            });
+        }
+        
+        // 从数据库删除图片
+        async function deleteImageFromDatabase(imageId) {
+            if (!supabase) return false;
+            
+            try {
+                const { error } = await supabase
+                    .from('images')
+                    .delete()
+                    .eq('id', imageId);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                showMessage('图片已从云端删除', false);
+                return true;
+            } catch (error) {
+                console.error('从数据库删除图片失败:', error);
+                showMessage('从服务器删除图片失败', true);
+                return false;
+            }
+        }
+        
+        // 从数据库加载图片
+        async function loadImagesFromDatabase() {
+            if (!supabase) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('images')
+                    .select('*')
+                    .order('uploaded_at', { ascending: false });
+                
+                if (error) {
+                    console.error('加载图片失败:', error);
+                    showMessage('从服务器加载图片失败', true);
+                    return;
+                }
+                
+                // 清空现有图片
+                images = [];
+                
+                // 将数据库中的数据转换为应用格式
+                if (data && data.length > 0) {
+                    data.forEach(item => {
+                        const image = {
+                            id: item.id,
+                            name: item.name,
+                            data: item.data,
+                            description: item.description,
+                            category: item.category || 'all',
+                            folder: item.folder || 'default',
+                            size: item.size || 0,
+                            uploadedAt: item.uploaded_at
+                        };
+                        images.push(image);
+                    });
+                    
+                    // 清空现有图片网格
+                    document.getElementById('imagesGrid').innerHTML = '';
+                    
+                    // 重新渲染所有图片
+                    images.forEach(image => {
+                        renderImage(image);
+                    });
+                    
+                    showMessage('图片已从服务器加载', false);
+                }
+            } catch (error) {
+                console.error('加载图片异常:', error);
+                showMessage('加载图片过程中发生错误', true);
+            }
+        }
+        
+        // 初始化Supabase
+        function initSupabase() {
+            try {
+                if (window.supabaseConfig && window.supabaseConfig.SUPABASE_URL && window.supabaseConfig.SUPABASE_ANON_KEY) {
+                    supabase = window.supabase.createClient(window.supabaseConfig.SUPABASE_URL, window.supabaseConfig.SUPABASE_ANON_KEY);
+                    console.log('Supabase初始化成功');
+                    loadTasksFromDatabase();
+                    loadLogsFromDatabase();
+                    loadImagesFromDatabase();
+                } else {
+                    console.warn('Supabase配置未设置');
+                    showMessage('数据库连接配置缺失，部分功能可能无法使用', true);
+                }
+            } catch (error) {
+                console.error('Supabase初始化失败:', error);
+                showMessage('连接服务器失败', true);
+            }
+        }
+        
+        // 从数据库加载任务
+        async function loadTasksFromDatabase() {
+            if (!supabase) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('加载任务失败:', error);
+                    showMessage('从服务器加载任务失败', true);
+                    return;
+                }
+                
+                // 清空现有任务
+                tasks = [];
+                
+                // 将数据库中的数据转换为应用格式
+                if (data && data.length > 0) {
+                    data.forEach(item => {
+                        const task = {
+                            id: item.id,
+                            text: item.content,
+                            priority: item.priority || 1,
+                            completed: item.completed || false,
+                            quadrant: item.quadrant || 1,
+                            category: item.category || getCategoryByPriority(item.priority || 1),
+                            createdAt: item.created_at
+                        };
+                        tasks.push(task);
+                    });
+                    
+                    // 清空现有任务列表
+                    document.querySelectorAll('.task-list').forEach(list => {
+                        list.innerHTML = '';
+                    });
+                    
+                    // 重新渲染所有任务
+                    tasks.forEach(task => {
+                        renderTask(task);
+                    });
+                    
+                    updateTaskStats();
+                    showMessage('任务已从服务器加载', false);
+                }
+            } catch (error) {
+                console.error('加载任务异常:', error);
+                showMessage('加载过程中发生错误', true);
+            }
+        }
+        
+        // 从数据库加载操作日志
+        async function loadLogsFromDatabase() {
+            if (!supabase) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('operation_logs')
+                    .select('*')
+                    .order('timestamp', { ascending: false });
+                
+                if (error) {
+                    console.error('加载操作日志失败:', error);
+                    showMessage('从服务器加载操作日志失败', true);
+                    return;
+                }
+                
+                // 清空现有操作日志
+                operationLogs = [];
+                
+                // 将数据库中的数据转换为应用格式
+                if (data && data.length > 0) {
+                    data.forEach(item => {
+                        const logEntry = {
+                            timestamp: item.timestamp,
+                            type: item.type,
+                            content: item.content,
+                            operator: item.operator
+                        };
+                        operationLogs.push(logEntry);
+                    });
+                    
+                    showMessage('操作日志已从服务器加载', false);
+                }
+            } catch (error) {
+                console.error('加载操作日志异常:', error);
+                showMessage('加载操作日志过程中发生错误', true);
+            }
+        }
+        
+        // 将任务保存到数据库
+        async function saveTaskToDatabase(task) {
+            if (!supabase) return null;
+            
+            try {
+                const taskData = {
+                    content: task.text,
+                    priority: task.priority,
+                    completed: task.completed,
+                    quadrant: task.quadrant,
+                    category: task.category,
+                    created_at: task.createdAt
+                };
+                
+                let result;
+                if (task.id) {
+                    // 更新现有任务
+                    result = await supabase
+                        .from('tasks')
+                        .update(taskData)
+                        .eq('id', task.id)
+                        .select();
+                } else {
+                    // 创建新任务
+                    result = await supabase
+                        .from('tasks')
+                        .insert([taskData])
+                        .select();
+                    
+                    // 获取新创建的任务ID
+                    if (result.data && result.data.length > 0) {
+                        task.id = result.data[0].id;
+                    }
+                }
+                
+                if (result.error) {
+                    throw result.error;
+                }
+                
+                showMessage('任务已保存到云端', false);
+                return task;
+            } catch (error) {
+                console.error('保存任务到数据库失败:', error);
+                showMessage('同步到服务器失败', true);
+                return null;
+            }
+        }
+        
+        // 更新数据库中的任务
+        async function updateTaskInDatabase(task) {
+            return await saveTaskToDatabase(task);
+        }
+        
+        // 从数据库删除任务
+        async function deleteTaskFromDatabase(taskId) {
+            if (!supabase) return false;
+            
+            try {
+                const { error } = await supabase
+                    .from('tasks')
+                    .delete()
+                    .eq('id', taskId);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                showMessage('任务已从云端删除', false);
+                return true;
+            } catch (error) {
+                console.error('从数据库删除任务失败:', error);
+                showMessage('从服务器删除任务失败', true);
+                return false;
+            }
+        }
+        
+        // 保存操作日志到数据库
+        async function saveLogToDatabase(logEntry) {
+            if (!supabase) return false;
+            
+            try {
+                const logData = {
+                    timestamp: logEntry.timestamp,
+                    type: logEntry.type,
+                    content: logEntry.content,
+                    operator: logEntry.operator
+                };
+                
+                const { error } = await supabase
+                    .from('operation_logs')
+                    .insert([logData]);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('保存操作日志到数据库失败:', error);
+                return false;
+            }
+        }
+        
+        // 显示消息
+        function showMessage(text, isError = false) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.className = isError ? 'error' : 'success';
+            message.style.display = 'block';
+            
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 显示模态框
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+        }
+        
+        // 隐藏模态框
+        function hideModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+        
+        // 显示通知
+        function showNotification(notificationId) {
+            const notification = document.getElementById(notificationId);
+            notification.classList.add('show');
+        }
+        
+        // 隐藏通知
+        function hideNotification(notificationId) {
+            const notification = document.getElementById(notificationId);
+            notification.classList.remove('show');
+        }
+        
+        // 初始化拖拽功能
+        function initDragAndDrop() {
+            // 为每个象限的任务列表初始化Sortable
+            for (let i = 1; i <= 4; i++) {
+                new Sortable(document.getElementById(`quadrant${i}`), {
+                    animation: 150,
+                    ghostClass: 'drag-over',
+                    dragClass: 'dragging',
+                    group: 'tasks',
+                    onEnd: function(evt) {
+                        const taskId = parseInt(evt.item.dataset.id);
+                        const newQuadrant = parseInt(evt.to.id.replace('quadrant', ''));
+                        const task = tasks.find(t => t.id === taskId);
+                        
+                        if (task && task.quadrant !== newQuadrant) {
+                            const oldQuadrant = task.quadrant;
+                            task.quadrant = newQuadrant;
+                            
+                            // 更新优先级
+                            if (newQuadrant === 1) task.priority = 1;
+                            else if (newQuadrant === 2) task.priority = 2;
+                            else if (newQuadrant === 3) task.priority = 3;
+                            else task.priority = 4;
+                            
+                            // 更新分类
+                            task.category = getCategoryByPriority(task.priority);
+                            
+                            // 更新数据库
+                            updateTaskInDatabase(task);
+                            
+                            // 记录操作日志
+                            logOperation('edit', `将任务"${task.text}"从${getQuadrantName(oldQuadrant)}移动到${getQuadrantName(newQuadrant)}`);
+                            
+                            updateTaskStats();
+                        }
+                    }
+                });
+            }
+        }
+        
+        // 等待Chart.js加载
+        function waitForChartJS() {
+            return new Promise((resolve, reject) => {
+                if (typeof Chart !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                let attempts = 0;
+                const maxAttempts = 10;
+                const interval = setInterval(() => {
+                    attempts++;
+                    if (typeof Chart !== 'undefined') {
+                        clearInterval(interval);
+                        resolve();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        reject(new Error('Chart.js加载超时'));
+                    }
+                }, 100);
+            });
+        }
+        
+        // 设置不活动计时器
+        function setupInactivityTimer() {
+            resetInactivityTimer();
+        }
+        
+        // 重置不活动计时器
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(logout, INACTIVITY_TIMEOUT);
+        }
+        
+        // 检查登录状态
+        function checkLoginStatus() {
+            // 每次打开网页都显示登录界面
+            document.getElementById('appContainer').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'flex';
+            document.getElementById('password').value = ''; // 清空密码输入框
+        }
+        
+        // 检查是否是新的日期
+        function checkNewDay() {
+            const lastAccessDate = localStorage.getItem('lastAccessDate');
+            const currentDate = new Date().toISOString().split('T')[0];
+            
+            if (lastAccessDate !== currentDate) {
+                // 获取昨天未完成的任务
+                const yesterdayUncompleted = tasks.filter(task => !task.completed);
+                yesterdayUncompletedTasks = [...yesterdayUncompleted];
+                
+                // 显示昨日未完成任务通知
+                if (yesterdayUncompleted.length > 0) {
+                    showYesterdayTasksNotification(yesterdayUncompleted);
+                }
+                
+                // 将当前已完成任务移动到已删除列表
+                tasks.forEach(task => {
+                    if (task.completed) {
+                        const deletedTask = {
+                            ...task,
+                            deletedAt: new Date().toISOString(),
+                            isSystemDeleted: true
+                        };
+                        deletedTasks.push(deletedTask);
+                        
+                        // 从数据库删除已完成的任务
+                        if (supabase) {
+                            deleteTaskFromDatabase(task.id);
+                        }
+                    }
+                });
+                
+                // 保留未完成的任务
+                tasks = tasks.filter(task => !task.completed);
+                
+                localStorage.setItem('lastAccessDate', currentDate);
+                
+                // 清空界面显示并重新渲染未完成的任务
+                document.querySelectorAll('.task-list').forEach(list => {
+                    list.innerHTML = '';
+                });
+                document.getElementById('listTasks').innerHTML = '';
+                
+                // 重新渲染未完成的任务
+                tasks.forEach(task => {
+                    renderTask(task);
+                });
+                
+                updateTaskStats();
+                
+                // 记录操作日志
+                logOperation('system', `新的一天开始，已清空已完成任务（${currentDate}），保留${tasks.length}项未完成任务`);
+            }
+        }
+        
+        // 显示昨日未完成任务通知
+        function showYesterdayTasksNotification(tasks) {
+            const listContainer = document.getElementById('yesterdayTasksList');
+            listContainer.innerHTML = '';
+            
+            tasks.forEach(task => {
+                const item = document.createElement('div');
+                item.className = 'yesterday-task-item';
+                item.innerHTML = `
+                    <div><strong>${task.text}</strong></div>
+                    <div>优先级: ${['紧急重要', '重要', '紧急', '普通'][task.priority - 1]} | 分类: ${task.category}</div>
+                `;
+                listContainer.appendChild(item);
+            });
+            
+            showNotification('yesterdayTasksNotification');
+        }
+        
+        // 登录成功
+        function loginSuccess() {
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('lastAccessDate', new Date().toISOString().split('T')[0]);
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            document.getElementById('password').value = ''; // 清空密码输入框
+            
+            // 检查是否是新的日期
+            checkNewDay();
+            
+            // 重置不活动计时器
+            resetInactivityTimer();
+            
+            // 记录操作日志
+            logOperation('system', '用户登录系统');
+        }
+        
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            document.getElementById('appContainer').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'flex';
+            document.getElementById('password').value = ''; // 清空密码输入框
+            
+            // 记录操作日志
+            logOperation('system', '用户退出系统');
+        }
+        
+        // 更新当前日期
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
+            
+            // 设置日期选择器默认值
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+            
+            // 初始化筛选状态
+            currentFilter.startDate = new Date(today);
+            currentFilter.endDate = new Date(today);
+            currentFilter.endDate.setHours(23, 59, 59, 999);
+        }
+        
+        // 切换视图
+        function switchView(view) {
+            document.getElementById('quadrantView').style.display = view === 'quadrant' ? 'grid' : 'none';
+            document.getElementById('listView').classList.toggle('active', view === 'list');
+            document.getElementById('foldersView').classList.toggle('active', view === 'folders');
+            document.getElementById('imagesView').classList.toggle('active', view === 'images');
+            document.getElementById('analyticsView').classList.toggle('active', view === 'analytics');
+            document.getElementById('logView').classList.toggle('active', view === 'log');
+            
+            if (view === 'list') {
+                renderListView();
+            } else if (view === 'folders') {
+                renderFolders();
+            } else if (view === 'images') {
+                loadImagesFromDatabase();
+            } else if (view === 'analytics') {
+                updateAnalytics();
+            } else if (view === 'log') {
+                loadOperationLogs();
+            }
+            
+            // 更新筛选状态显示
+            updateFilterStatus();
+        }
+        
+        // 保存视图偏好
+        function saveViewPreference() {
+            localStorage.setItem('preferredView', currentView);
+        }
+        
+        // 加载视图偏好
+        function loadViewPreference() {
+            const preferredView = localStorage.getItem('preferredView');
+            if (preferredView) {
+                currentView = preferredView;
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                    if (tab.dataset.view === preferredView) {
+                        tab.classList.add('active');
+                    }
+                });
+                switchView(preferredView);
+            }
+        }
+        
+        // 获取筛选后的任务
+        function getFilteredTasks() {
+            if (!currentFilter.startDate && !currentFilter.endDate) {
+                return tasks;
+            }
+            
+            return tasks.filter(task => {
+                const taskDate = new Date(task.createdAt);
+                return (!currentFilter.startDate || taskDate >= currentFilter.startDate) &&
+                       (!currentFilter.endDate || taskDate <= currentFilter.endDate);
+            });
+        }
+        
+        // 渲染列表视图
+        function renderListView() {
+            const listContainer = document.getElementById('listTasks');
+            listContainer.innerHTML = '';
+            
+            const filteredTasks = getFilteredTasks();
+            
+            if (filteredTasks.length === 0) {
+                listContainer.innerHTML = '<div class="empty-state">没有找到匹配的任务</div>';
+                return;
+            }
+            
+            // 根据排序方法对任务进行排序
+            let sortedTasks = [...filteredTasks];
+            
+            switch (listSortMethod) {
+                case 'date':
+                    sortedTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    break;
+                case 'name':
+                    sortedTasks.sort((a, b) => a.text.localeCompare(b.text));
+                    break;
+                case 'priority':
+                    sortedTasks.sort((a, b) => a.priority - b.priority);
+                    break;
+                case 'category':
+                    sortedTasks.sort((a, b) => a.category.localeCompare(b.category));
+                    break;
+            }
+            
+            // 按分组渲染任务
+            if (listSortMethod === 'date') {
+                // 按日期分组
+                const groupedTasks = groupTasksByDate(sortedTasks);
+                renderGroupedTasks(groupedTasks, 'date');
+            } else if (listSortMethod === 'category') {
+                // 按分类分组
+                const groupedTasks = groupTasksByCategory(sortedTasks);
+                renderGroupedTasks(groupedTasks, 'category');
+            } else {
+                // 不分组，直接渲染
+                sortedTasks.forEach(task => {
+                    renderListRow(task);
+                });
+            }
+        }
+        
+        // 按日期分组任务
+        function groupTasksByDate(tasks) {
+            const groups = {};
+            
+            tasks.forEach(task => {
+                const date = new Date(task.createdAt).toLocaleDateString();
+                if (!groups[date]) {
+                    groups[date] = [];
+                }
+                groups[date].push(task);
+            });
+            
+            return groups;
+        }
+        
+        // 按分类分组任务
+        function groupTasksByCategory(tasks) {
+            const groups = {};
+            
+            tasks.forEach(task => {
+                const category = task.category;
+                if (!groups[category]) {
+                    groups[category] = [];
+                }
+                groups[category].push(task);
+            });
+            
+            return groups;
+        }
+        
+        // 渲染分组任务
+        function renderGroupedTasks(groups, groupType) {
+            const listContainer = document.getElementById('listTasks');
+            
+            Object.keys(groups).sort((a, b) => {
+                if (groupType === 'date') {
+                    return new Date(b) - new Date(a);
+                } else {
+                    return a.localeCompare(b);
+                }
+            }).forEach(groupKey => {
+                // 添加分组标题
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'list-group-header';
+                groupHeader.textContent = groupType === 'date' ? 
+                    groupKey : `${getCategoryNameById(groupKey)} (${groups[groupKey].length}项)`;
+                listContainer.appendChild(groupHeader);
+                
+                // 渲染该组内的任务
+                groups[groupKey].forEach(task => {
+                    renderListRow(task);
+                });
+            });
+        }
+        
+        // 渲染列表行
+        function renderListRow(task) {
+            const listContainer = document.getElementById('listTasks');
+            const priorityText = ['紧急重要', '重要', '紧急', '普通'][task.priority - 1];
+            
+            const row = document.createElement('div');
+            row.className = 'list-row' + (task.completed ? ' completed' : '');
+            row.dataset.id = task.id;
+            
+            row.innerHTML = `
+                <div><input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}></div>
+                <div class="task-text">${task.text}</div>
+                <div class="priority">${priorityText}</div>
+                <div>${getCategoryNameById(task.category)}</div>
+                <div>
+                    <button class="task-action edit-btn">✏️</button>
+                    <button class="task-action delete-btn">🗑️</button>
+                </div>
+            `;
+            
+            listContainer.appendChild(row);
+        }
+        
+        // 渲染四象限视图
+        function renderQuadrantView() {
+            // 清空现有任务列表
+            document.querySelectorAll('.task-list').forEach(list => {
+                list.innerHTML = '';
+            });
+            
+            const filteredTasks = getFilteredTasks();
+            
+            // 重新渲染所有任务
+            filteredTasks.forEach(task => {
+                renderTask(task);
+            });
+            
+            // 更新任务计数
+            updateTaskStats();
+        }
+        
+        // 初始化图表
+        function initChart() {
+            try {
+                const ctx = document.getElementById('taskChart').getContext('2d');
+                window.taskChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['紧急且重要', '重要不紧急', '紧急不重要', '不紧急不重要'],
+                        datasets: [{
+                            data: [0, 0, 0, 0],
+                            backgroundColor: [
+                                'rgba(255, 77, 77, 0.8)',
+                                'rgba(255, 159, 28, 0.8)',
+                                'rgba(46, 196, 182, 0.8)',
+                                'rgba(203, 243, 240, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 77, 77, 1)',
+                                'rgba(255, 159, 28, 1)',
+                                'rgba(46, 196, 182, 1)',
+                                'rgba(203, 243, 240, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            } catch (error) {
+                console.error('初始化图表失败:', error);
+                document.getElementById('taskChart').parentElement.innerHTML = '<p>图表初始化失败</p>';
+            }
+        }
+        
+        // 初始化分析图表
+        function initAnalyticsCharts() {
+            try {
+                // 任务分布图
+                const distCtx = document.getElementById('taskDistributionChart').getContext('2d');
+                window.taskDistributionChart = new Chart(distCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['紧急且重要', '重要不紧急', '紧急不重要', '不紧急不重要'],
+                        datasets: [{
+                            label: '任务数量',
+                            data: [0, 0, 0, 0],
+                            backgroundColor: [
+                                'rgba(255, 77, 77, 0.8)',
+                                'rgba(255, 159, 28, 0.8)',
+                                'rgba(46, 196, 182, 0.8)',
+                                'rgba(203, 243, 240, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 77, 77, 1)',
+                                'rgba(255, 159, 28, 1)',
+                                'rgba(46, 196, 182, 1)',
+                                'rgba(203, 243, 240, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                
+                // 完成情况图
+                const compCtx = document.getElementById('completionChart').getContext('2d');
+                window.completionChart = new Chart(compCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['已完成', '未完成'],
+                        datasets: [{
+                            data: [0, 0],
+                            backgroundColor: [
+                                'rgba(40, 167, 69, 0.8)',
+                                'rgba(220, 53, 69, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(40, 167, 69, 1)',
+                                'rgba(220, 53, 69, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            }
+                        }
+                    }
+                });
+                
+                // 优先级分布图
+                const prioCtx = document.getElementById('priorityChart').getContext('2d');
+                window.priorityChart = new Chart(prioCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['紧急重要', '重要', '紧急', '普通'],
+                        datasets: [{
+                            data: [0, 0, 0, 0],
+                            backgroundColor: [
+                                'rgba(255, 77, 77, 0.8)',
+                                'rgba(255, 159, 28, 0.8)',
+                                'rgba(46, 196, 182, 0.8)',
+                                'rgba(203, 243, 240, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 77, 77, 1)',
+                                'rgba(255, 159, 28, 1)',
+                                'rgba(46, 196, 182, 1)',
+                                'rgba(203, 243, 240, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            } catch (error) {
+                console.error('初始化分析图表失败:', error);
+                document.querySelectorAll('.chart-container').forEach(container => {
+                    container.innerHTML = '<p>图表初始化失败</p>';
+                });
+            }
+        }
+        
+        // 更新分析数据
+        function updateAnalytics() {
+            try {
+                const filteredTasks = getFilteredTasks();
+                const totalTasks = filteredTasks.length;
+                const completedTasks = filteredTasks.filter(t => t.completed).length;
+                const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                
+                const urgentTasks = filteredTasks.filter(t => t.priority === 1);
+                const urgentCompleted = urgentTasks.filter(t => t.completed).length;
+                const urgentCompletionRate = urgentTasks.length > 0 ? Math.round((urgentCompleted / urgentTasks.length) * 100) : 0;
+                
+                // 更新数字显示
+                document.getElementById('completionRateBig').textContent = `${completionRate}%`;
+                document.getElementById('urgentCompletion').textContent = `${urgentCompletionRate}%`;
+                
+                // 更新图表数据
+                const quadrantData = [0, 0, 0, 0];
+                filteredTasks.forEach(task => {
+                    quadrantData[task.quadrant - 1]++;
+                });
+                
+                const priorityData = [0, 0, 0, 0];
+                filteredTasks.forEach(task => {
+                    priorityData[task.priority - 1]++;
+                });
+                
+                const completedData = [
+                    filteredTasks.filter(t => t.completed).length,
+                    filteredTasks.filter(t => !t.completed).length
+                ];
+                
+                if (window.taskDistributionChart) {
+                    window.taskDistributionChart.data.datasets[0].data = quadrantData;
+                    window.taskDistributionChart.update();
+                }
+                
+                if (window.completionChart) {
+                    window.completionChart.data.datasets[0].data = completedData;
+                    window.completionChart.update();
+                }
+                
+                if (window.priorityChart) {
+                    window.priorityChart.data.datasets[0].data = priorityData;
+                    window.priorityChart.update();
+                }
+                
+                // 更新任务概览图表
+                updateTaskChart();
+            } catch (error) {
+                console.error('更新分析数据失败:', error);
+            }
+        }
+        
+        // 更新任务概览图表
+        function updateTaskChart() {
+            try {
+                const filteredTasks = getFilteredTasks();
+                const quadrantData = [0, 0, 0, 0];
+                filteredTasks.forEach(task => {
+                    quadrantData[task.quadrant - 1]++;
+                });
+                
+                if (window.taskChart) {
+                    window.taskChart.data.datasets[0].data = quadrantData;
+                    window.taskChart.update();
+                }
+            } catch (error) {
+                console.error('更新任务概览图表失败:', error);
+            }
+        }
+        
+        // 更新任务统计
+        function updateTaskStats() {
+            const filteredTasks = getFilteredTasks();
+            const totalTasks = filteredTasks.length;
+            const completedTasks = filteredTasks.filter(t => t.completed).length;
+            const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            const urgentTasks = filteredTasks.filter(t => t.priority === 1).length;
+            
+            document.getElementById('totalTasks').textContent = totalTasks;
+            document.getElementById('completedTasks').textContent = completedTasks;
+            document.getElementById('completionRate').textContent = `${completionRate}%`;
+            document.getElementById('urgentTasks').textContent = urgentTasks;
+            
+            // 更新各象限的任务计数
+            document.querySelectorAll('.quadrant').forEach(quadrant => {
+                const quadrantId = parseInt(quadrant.className.split(' ')[1].split('-')[1]);
+                const count = filteredTasks.filter(t => t.quadrant === quadrantId).length;
+                quadrant.querySelector('.task-count').textContent = `${count}项`;
+            });
+            
+            // 更新任务概览图表
+            updateTaskChart();
+            
+            // 如果当前是分析视图，更新分析数据
+            if (currentView === 'analytics') {
+                updateAnalytics();
+            }
+        }
+        
+        // 更新筛选状态显示
+        function updateFilterStatus() {
+            const statusElement = document.getElementById('filterStatus');
+            
+            if (!currentFilter.startDate && !currentFilter.endDate) {
+                statusElement.textContent = '显示所有任务';
+                return;
+            }
+            
+            const startDate = currentFilter.startDate ? new Date(currentFilter.startDate).toLocaleDateString() : '不限';
+            const endDate = currentFilter.endDate ? new Date(currentFilter.endDate).toLocaleDateString() : '不限';
+            
+            statusElement.textContent = `筛选: ${startDate} 至 ${endDate}`;
+        }
+        
+        // 添加新任务
+        function addNewTask() {
+            const input = document.getElementById('newTaskInput');
+            const text = input.value.trim();
+            
+            if (text) {
+                // 确定象限 (简化逻辑: 1=紧急重要, 2=重要不紧急, 3=紧急不重要, 4=不紧急不重要)
+                let quadrant;
+                if (currentPriority === 1) quadrant = 1;
+                else if (currentPriority === 2) quadrant = 2;
+                else if (currentPriority === 3) quadrant = 3;
+                else quadrant = 4;
+                
+                addTaskToQuadrant(text, quadrant);
+                input.value = '';
+                hideSuggestions(null);
+                resetInactivityTimer();
+            } else {
+                // 如果没有输入内容，创建一个空任务并打开编辑模态框
+                let quadrant;
+                if (currentPriority === 1) quadrant = 1;
+                else if (currentPriority === 2) quadrant = 2;
+                else if (currentPriority === 3) quadrant = 3;
+                else quadrant = 4;
+                
+                createEmptyTask(quadrant);
+            }
+        }
+        
+        // 添加任务到指定象限
+        async function addTaskToQuadrant(text, quadrant) {
+            // 创建新任务
+            const newTask = {
+                text: text,
+                priority: currentPriority,
+                completed: false,
+                quadrant: quadrant,
+                category: getCategoryByPriority(currentPriority),
+                createdAt: new Date().toISOString()
+            };
+            
+            // 保存到数据库
+            const savedTask = await saveTaskToDatabase(newTask);
+            if (savedTask) {
+                tasks.push(savedTask);
+                renderTask(savedTask);
+                
+                // 添加到建议列表
+                addSuggestion(text);
+                
+                // 记录操作日志
+                logOperation('add', `新增任务："${text}"（优先级：${currentPriority}，象限：${getQuadrantName(quadrant)}）`);
+                
+                updateTaskStats();
+            }
+        }
+        
+        // 根据象限获取名称
+        function getQuadrantName(quadrant) {
+            const names = {
+                1: '紧急且重要',
+                2: '重要不紧急',
+                3: '紧急不重要',
+                4: '不紧急不重要'
+            };
+            return names[quadrant] || '';
+        }
+        
+        // 根据优先级获取分类
+        function getCategoryByPriority(priority) {
+            const categories = {
+                1: "紧急处理",
+                2: "战略规划",
+                3: "日常应急",
+                4: "常规事务"
+            };
+            return categories[priority] || "其他";
+        }
+        
+        // 显示建议
+        function showSuggestions(text, quadrant) {
+            const suggestions = getSuggestions(text, quadrant);
+            const containerId = quadrant ? `suggestions${quadrant}` : 'mainSuggestions';
+            const container = document.getElementById(containerId);
+            
+            container.innerHTML = '';
+            
+            if (suggestions.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            suggestions.forEach((suggestion, index) => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerHTML = `
+                    <span>${suggestion}</span>
+                    <span class="suggestion-edit" data-index="${index}">✏️</span>
+                `;
+                
+                item.addEventListener('click', function(e) {
+                    if (!e.target.classList.contains('suggestion-edit')) {
+                        const input = container.previousElementSibling;
+                        input.value = suggestion;
+                        input.focus();
+                        hideSuggestions(quadrant);
+                    }
+                });
+                
+                const editBtn = item.querySelector('.suggestion-edit');
+                editBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    editingSuggestionIndex = index;
+                    document.getElementById('editSuggestionText').value = suggestion;
+                    showModal('editSuggestionModal');
+                });
+                
+                container.appendChild(item);
+            });
+            
+            container.style.display = 'block';
+        }
+        
+        // 隐藏建议
+        function hideSuggestions(quadrant) {
+            const containerId = quadrant ? `suggestions${quadrant}` : 'mainSuggestions';
+            const container = document.getElementById(containerId);
+            container.style.display = 'none';
+        }
+        
+        // 获取建议
+        function getSuggestions(text, quadrant) {
+            if (!text) {
+                return [];
+            }
+            
+            const lowerText = text.toLowerCase();
+            return taskSuggestions
+                .filter(suggestion => suggestion.toLowerCase().includes(lowerText))
+                .slice(0, 5);
+        }
+        
+        // 添加建议
+        function addSuggestion(text) {
+            if (!taskSuggestions.includes(text)) {
+                taskSuggestions.unshift(text);
+                if (taskSuggestions.length > 50) {
+                    taskSuggestions.pop();
+                }
+                // 保存建议到localStorage（仅建议使用本地存储）
+                localStorage.setItem('taskSuggestions', JSON.stringify(taskSuggestions));
+            }
+        }
+        
+        // 保存编辑的建议
+        function saveEditedSuggestion() {
+            const newText = document.getElementById('editSuggestionText').value.trim();
+            if (newText && editingSuggestionIndex !== -1) {
+                taskSuggestions[editingSuggestionIndex] = newText;
+                // 保存建议到localStorage（仅建议使用本地存储）
+                localStorage.setItem('taskSuggestions', JSON.stringify(taskSuggestions));
+                hideModal('editSuggestionModal');
+                
+                // 更新所有建议列表
+                document.querySelectorAll('.add-task-input').forEach(input => {
+                    const quadrant = parseInt(input.dataset.quadrant);
+                    showSuggestions(input.value, quadrant);
+                });
+                
+                showSuggestions(document.getElementById('newTaskInput').value, null);
+            }
+        }
+        
+        // 渲染任务到对应象限
+        function renderTask(task) {
+            const quadrantId = `quadrant${task.quadrant}`;
+            const quadrantList = document.getElementById(quadrantId);
+            
+            const taskItem = document.createElement('li');
+            taskItem.className = 'task-item' + (task.completed ? ' completed' : '');
+            taskItem.dataset.id = task.id;
+            taskItem.dataset.priority = task.priority;
+            
+            const taskDate = new Date(task.createdAt);
+            const dateString = taskDate.toLocaleDateString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit'});
+            
+            taskItem.innerHTML = `
+                <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}>
+                <span class="task-priority priority-${task.priority}"></span>
+                <span class="task-text">${task.text}</span>
+                <span class="task-date">${dateString}</span>
+                <div class="task-actions">
+                    <button class="task-action edit-btn">✏️</button>
+                    <button class="task-action delete-btn">🗑️</button>
+                </div>
+            `;
+            
+            quadrantList.appendChild(taskItem);
+            
+            // 确保任务容器是展开的
+            document.getElementById(`taskContainer${task.quadrant}`).style.display = 'block';
+            
+            // 添加事件监听器
+            const checkbox = taskItem.querySelector('.task-checkbox');
+            checkbox.addEventListener('change', function() {
+                task.completed = this.checked;
+                taskItem.classList.toggle('completed', task.completed);
+                
+                // 更新数据库
+                updateTaskInDatabase(task);
+                
+                // 记录操作日志
+                logOperation(task.completed ? 'complete' : 'incomplete', 
+                             `标记任务为${task.completed ? '已完成' : '未完成'}："${task.text}"（象限：${getQuadrantName(task.quadrant)}）`);
+                
+                updateTaskStats();
+            });
+            
+            const editBtn = taskItem.querySelector('.edit-btn');
+            editBtn.addEventListener('click', function() {
+                openEditModal(task.id);
+            });
+            
+            const deleteBtn = taskItem.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', function() {
+                deleteTask(task.id);
+            });
+            
+            // 如果当前是列表视图，更新列表
+            if (currentView === 'list') {
+                renderListView();
+            }
+        }
+        
+        // 打开编辑模态框
+        function openEditModal(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                editingTaskId = taskId;
+                document.getElementById('editTaskText').value = task.text;
+                
+                // 更新分类选择器
+                updateCategorySelectors();
+                document.getElementById('editTaskCategory').value = task.category;
+                
+                // 设置优先级选择
+                document.querySelectorAll('#editModal .priority-option').forEach(option => {
+                    option.classList.remove('selected');
+                    if (parseInt(option.dataset.priority) === task.priority) {
+                        option.classList.add('selected');
+                    }
+                });
+                
+                // 添加优先级选择事件
+                document.querySelectorAll('#editModal .priority-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        document.querySelectorAll('#editModal .priority-option').forEach(opt => {
+                            opt.classList.remove('selected');
+                        });
+                        this.classList.add('selected');
+                    });
+                });
+                
+                showModal('editModal');
+            }
+        }
+        
+        // 关闭编辑模态框
+        function closeEditModal() {
+            hideModal('editModal');
+            editingTaskId = null;
+        }
+        
+        // 保存编辑后的任务
+        async function saveEditedTask() {
+            if (editingTaskId !== null) {
+                const task = tasks.find(t => t.id === editingTaskId);
+                if (task) {
+                    const oldText = task.text;
+                    const oldPriority = task.priority;
+                    const oldCategory = task.category;
+                    const oldQuadrant = task.quadrant;
+                    
+                    task.text = document.getElementById('editTaskText').value;
+                    task.category = document.getElementById('editTaskCategory').value;
+                    
+                    const selectedPriority = document.querySelector('#editModal .priority-option.selected');
+                    if (selectedPriority) {
+                        const newPriority = parseInt(selectedPriority.dataset.priority);
+                        task.priority = newPriority;
+                        
+                        // 更新象限
+                        if (newPriority === 1) task.quadrant = 1;
+                        else if (newPriority === 2) task.quadrant = 2;
+                        else if (newPriority === 3) task.quadrant = 3;
+                        else task.quadrant = 4;
+                    }
+                    
+                    // 更新数据库
+                    const savedTask = await updateTaskInDatabase(task);
+                    if (savedTask) {
+                        // 记录操作日志
+                        let changes = [];
+                        if (oldText !== task.text) changes.push(`内容从"${oldText}"修改为"${task.text}"`);
+                        if (oldPriority !== task.priority) changes.push(`优先级从${oldPriority}修改为${task.priority}`);
+                        if (oldCategory !== task.category) changes.push(`分类从"${getCategoryNameById(oldCategory)}"修改为"${getCategoryNameById(task.category)}"`);
+                        if (oldQuadrant !== task.quadrant) changes.push(`象限从"${getQuadrantName(oldQuadrant)}"修改为"${getQuadrantName(task.quadrant)}"`);
+                        
+                        if (changes.length > 0) {
+                            logOperation('edit', `编辑任务：${changes.join('，')}（象限：${getQuadrantName(task.quadrant)}）`);
+                        }
+                        
+                        // 重新渲染所有视图
+                        renderQuadrantView();
+                        
+                        if (currentView === 'list') {
+                            renderListView();
+                        }
+                        
+                        updateTaskStats();
+                        closeEditModal();
+                    }
+                }
+            }
+        }
+        
+        // 删除任务
+        async function deleteTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                if (confirm(`确定要删除任务"${task.text}"吗？`)) {
+                    // 添加到已删除任务列表
+                    const deletedTask = {
+                        ...task,
+                        deletedAt: new Date().toISOString()
+                    };
+                    deletedTasks.push(deletedTask);
+                    
+                    // 从数据库删除
+                    const success = await deleteTaskFromDatabase(taskId);
+                    if (success) {
+                        // 记录操作日志
+                        logOperation('delete', `删除任务："${task.text}"（ID: ${taskId}，象限：${getQuadrantName(task.quadrant)}）`);
+                        
+                        tasks = tasks.filter(t => t.id !== taskId);
+                        document.querySelector(`.task-item[data-id="${taskId}"]`)?.remove();
+                        document.querySelector(`.list-row[data-id="${taskId}"]`)?.remove();
+                        updateTaskStats();
+                    }
+                }
+            }
+        }
+        
+        // 删除选中任务
+        async function deleteSelectedTasks() {
+            const selectedCheckboxes = document.querySelectorAll('.task-checkbox:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('请先选择要删除的任务');
+                return;
+            }
+            
+            if (confirm(`确定要删除选中的 ${selectedCheckboxes.length} 项任务吗？`)) {
+                let successCount = 0;
+                for (const checkbox of selectedCheckboxes) {
+                    const taskId = parseInt(checkbox.closest('.task-item, .list-row').dataset.id);
+                    const task = tasks.find(t => t.id === taskId);
+                    
+                    if (task) {
+                        // 添加到已删除任务列表
+                        const deletedTask = {
+                            ...task,
+                            deletedAt: new Date().toISOString()
+                        };
+                        deletedTasks.push(deletedTask);
+                        
+                        // 从数据库删除
+                        const success = await deleteTaskFromDatabase(taskId);
+                        if (success) {
+                            successCount++;
+                            
+                            // 记录操作日志
+                            logOperation('delete', `删除任务："${task.text}"（ID: ${taskId}，象限：${getQuadrantName(task.quadrant)}）`);
+                        }
+                        
+                        tasks = tasks.filter(t => t.id !== taskId);
+                        checkbox.closest('.task-item, .list-row').remove();
+                    }
+                }
+                
+                updateTaskStats();
+            }
+        }
+        
+        // 删除已完成任务
+        async function deleteCompletedTasks() {
+            const completedTasks = tasks.filter(t => t.completed);
+            if (completedTasks.length === 0) {
+                alert('没有已完成的任务');
+                return;
+            }
+            
+            if (confirm(`确定要删除 ${completedTasks.length} 项已完成任务吗？`)) {
+                let successCount = 0;
+                // 添加到已删除任务列表并记录操作日志
+                for (const task of completedTasks) {
+                    const deletedTask = {
+                        ...task,
+                        deletedAt: new Date().toISOString()
+                    };
+                    deletedTasks.push(deletedTask);
+                    
+                    // 从数据库删除
+                    const success = await deleteTaskFromDatabase(task.id);
+                    if (success) {
+                        successCount++;
+                    }
+                    
+                    logOperation('delete', `删除已完成任务："${task.text}"（ID: ${task.id}，象限：${getQuadrantName(task.quadrant)}）`);
+                }
+                
+                tasks = tasks.filter(t => !t.completed);
+                document.querySelectorAll('.task-item.completed, .list-row.completed').forEach(item => item.remove());
+                
+                updateTaskStats();
+            }
+        }
+        
+        // 清空所有任务
+        async function clearAllTasks() {
+            if (tasks.length === 0) {
+                alert('没有任务可清空');
+                return;
+            }
+            
+            if (confirm('确定要清空所有任务吗？此操作不可恢复！')) {
+                let successCount = 0;
+                // 添加到已删除任务列表
+                for (const task of tasks) {
+                    const deletedTask = {
+                        ...task,
+                        deletedAt: new Date().toISOString(),
+                        isSystemDeleted: false
+                    };
+                    deletedTasks.push(deletedTask);
+                    
+                    // 从数据库删除
+                    const success = await deleteTaskFromDatabase(task.id);
+                    if (success) {
+                        successCount++;
+                    }
+                }
+                
+                // 记录操作日志
+                logOperation('delete', `清空所有任务（共${tasks.length}项）`);
+                
+                tasks = [];
+                document.querySelectorAll('.task-list').forEach(list => {
+                    list.innerHTML = '';
+                });
+                document.getElementById('listTasks').innerHTML = '';
+                
+                updateTaskStats();
+            }
+        }
+        
+        // 显示已删除任务
+        function showDeletedTasks() {
+            const deletedList = document.getElementById('deletedTasksList');
+            deletedList.innerHTML = '';
+            
+            if (deletedTasks.length === 0) {
+                deletedList.innerHTML = '<li class="empty-state">没有已删除的任务</li>';
+            } else {
+                // 按删除时间倒序排列
+                const sortedDeletedTasks = [...deletedTasks].sort((a, b) => 
+                    new Date(b.deletedAt) - new Date(a.deletedAt));
+                
+                sortedDeletedTasks.forEach(task => {
+                    const priorityText = ['紧急重要', '重要', '紧急', '普通'][task.priority - 1];
+                    const quadrantText = getQuadrantName(task.quadrant);
+                    const deletedDate = new Date(task.deletedAt).toLocaleString();
+                    const isSystemDeleted = task.isSystemDeleted ? '（系统自动删除）' : '';
+                    
+                    const item = document.createElement('li');
+                    item.className = 'deleted-task-item';
+                    item.innerHTML = `
+                        <div style="display: flex; align-items: center;">
+                            <input type="checkbox" class="task-checkbox" style="margin-right: 10px;" data-id="${task.id}">
+                            <div class="deleted-task-info">
+                                <div><strong>${task.text}</strong> ${isSystemDeleted}</div>
+                                <div>优先级: ${priorityText} | 分类: ${getCategoryNameById(task.category)} | 象限: ${quadrantText}</div>
+                                <div>删除时间: ${deletedDate}</div>
+                            </div>
+                        </div>
+                        <div class="deleted-task-actions">
+                            <button class="restore-btn" data-id="${task.id}">恢复</button>
+                            <button class="permanently-delete-btn" data-id="${task.id}">永久删除</button>
+                        </div>
+                    `;
+                    
+                    // 添加恢复按钮事件
+                    const restoreBtn = item.querySelector('.restore-btn');
+                    restoreBtn.addEventListener('click', function() {
+                        restoreTask(task.id);
+                    });
+                    
+                    // 添加永久删除按钮事件
+                    const deleteBtn = item.querySelector('.permanently-delete-btn');
+                    deleteBtn.addEventListener('click', function() {
+                        permanentlyDeleteTask(task.id);
+                    });
+                    
+                    deletedList.appendChild(item);
+                });
+            }
+            
+            showModal('deletedTasksModal');
+        }
+        
+        // 筛选已删除任务
+        function filterDeletedTasks() {
+            const searchText = document.getElementById('searchDeletedTasks').value.toLowerCase();
+            const items = document.querySelectorAll('.deleted-task-item');
+            
+            items.forEach(item => {
+                const taskText = item.querySelector('.deleted-task-info').textContent.toLowerCase();
+                if (taskText.includes(searchText)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+        
+        // 清除已删除任务搜索
+        function clearDeletedTasksSearch() {
+            document.getElementById('searchDeletedTasks').value = '';
+            const items = document.querySelectorAll('.deleted-task-item');
+            items.forEach(item => {
+                item.style.display = 'flex';
+            });
+        }
+        
+        // 恢复选中的任务
+        function restoreSelectedTasks() {
+            const selectedCheckboxes = document.querySelectorAll('#deletedTasksList .task-checkbox:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('请先选择要恢复的任务');
+                return;
+            }
+            
+            if (confirm(`确定要恢复选中的 ${selectedCheckboxes.length} 项任务吗？`)) {
+                selectedCheckboxes.forEach(checkbox => {
+                    const taskId = parseInt(checkbox.dataset.id);
+                    restoreTask(taskId);
+                });
+                
+                // 重新显示已删除任务列表
+                showDeletedTasks();
+            }
+        }
+        
+        // 关闭已删除任务模态框
+        function closeDeletedTasksModal() {
+            hideModal('deletedTasksModal');
+        }
+        
+        // 恢复任务
+        async function restoreTask(taskId) {
+            const taskIndex = deletedTasks.findIndex(t => t.id === taskId);
+            if (taskIndex !== -1) {
+                const task = deletedTasks[taskIndex];
+                
+                // 从已删除列表中移除
+                deletedTasks.splice(taskIndex, 1);
+                
+                // 添加到任务列表
+                tasks.push(task);
+                renderTask(task);
+                
+                // 保存到数据库
+                const savedTask = await saveTaskToDatabase(task);
+                if (savedTask) {
+                    // 记录操作日志
+                    logOperation('restore', `恢复任务："${task.text}"（ID: ${task.id}，象限：${getQuadrantName(task.quadrant)}）`);
+                    
+                    // 更新UI
+                    updateTaskStats();
+                }
+            }
+        }
+        
+        // 永久删除任务
+        function permanentlyDeleteTask(taskId) {
+            if (confirm('确定要永久删除此任务吗？此操作不可恢复！')) {
+                const taskIndex = deletedTasks.findIndex(t => t.id === taskId);
+                if (taskIndex !== -1) {
+                    const task = deletedTasks[taskIndex];
+                    
+                    // 记录操作日志
+                    logOperation('delete', `永久删除任务："${task.text}"（ID: ${task.id}）`);
+                    
+                    // 从已删除列表中移除
+                    deletedTasks.splice(taskIndex, 1);
+                    
+                    // 更新UI
+                    document.querySelector(`#deletedTasksList li input[data-id="${taskId}"]`)?.closest('li').remove();
+                }
+            }
+        }
+        
+        // 应用快捷日期筛选
+        function applyQuickFilter() {
+            const quickFilter = document.getElementById('quickDateFilter').value;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let startDate, endDate;
+            
+            switch (quickFilter) {
+                case 'today':
+                    startDate = today;
+                    endDate = new Date(today);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'yesterday':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 1);
+                    endDate = new Date(startDate);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'last7days':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 6);
+                    endDate = new Date(today);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'last15days':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 14);
+                    endDate = new Date(today);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'last30days':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 29);
+                    endDate = new Date(today);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'thismonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'lastmonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'thisyear':
+                    startDate = new Date(today.getFullYear(), 0, 1);
+                    endDate = new Date(today.getFullYear(), 11, 31);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'lastyear':
+                    startDate = new Date(today.getFullYear() - 1, 0, 1);
+                    endDate = new Date(today.getFullYear() - 1, 11, 31);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'all':
+                    resetDateFilter();
+                    return;
+            }
+            
+            // 更新UI
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            
+            // 更新筛选状态
+            currentFilter.quickFilter = quickFilter;
+            currentFilter.startDate = startDate;
+            currentFilter.endDate = endDate;
+            
+            // 应用筛选
+            applyDateFilter();
+        }
+        
+        // 应用日期筛选
+        function applyDateFilter() {
+            const startDateStr = document.getElementById('startDate').value;
+            const endDateStr = document.getElementById('endDate').value;
+            
+            if (!startDateStr && !endDateStr) {
+                // 没有筛选条件，显示所有
+                currentFilter.startDate = null;
+                currentFilter.endDate = null;
+            } else {
+                // 更新筛选状态
+                currentFilter.startDate = startDateStr ? new Date(startDateStr) : null;
+                currentFilter.endDate = endDateStr ? new Date(endDateStr) : null;
+                
+                if (currentFilter.endDate) {
+                    currentFilter.endDate.setHours(23, 59, 59, 999);
+                }
+            }
+            
+            // 根据当前视图更新显示
+            switch (currentView) {
+                case 'quadrant':
+                    renderQuadrantView();
+                    break;
+                case 'list':
+                    renderListView();
+                    break;
+                case 'analytics':
+                    updateAnalytics();
+                    break;
+                case 'log':
+                    loadOperationLogs();
+                    break;
+            }
+            
+            // 更新筛选状态显示
+            updateFilterStatus();
+        }
+        
+        // 重置日期筛选
+        function resetDateFilter() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('quickDateFilter').value = 'today';
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+            
+            // 重置筛选状态
+            currentFilter.quickFilter = 'today';
+            currentFilter.startDate = new Date(today);
+            currentFilter.endDate = new Date(today);
+            currentFilter.endDate.setHours(23, 59, 59, 999);
+            
+            // 应用重置
+            applyDateFilter();
+        }
+        
+        // 记录操作日志
+        async function logOperation(type, content) {
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                type: type,
+                content: content,
+                operator: '管理员'
+            };
+            operationLogs.push(logEntry);
+            
+            // 保存到数据库
+            if (supabase) {
+                await saveLogToDatabase(logEntry);
+            }
+            
+            // 如果当前在日志视图，刷新显示
+            if (currentView === 'log') {
+                loadOperationLogs(currentLogPage);
+            }
+        }
+        
+        // 清除操作日志
+        function clearLogs() {
+            const selectedCheckboxes = document.querySelectorAll('#logList .log-checkbox:checked');
+            if (selectedCheckboxes.length === 0) {
+                if (confirm('确定要清除所有操作记录吗？此操作不可恢复！')) {
+                    operationLogs = [];
+                    loadOperationLogs();
+                }
+            } else {
+                if (confirm(`确定要清除选中的 ${selectedCheckboxes.length} 条操作记录吗？此操作不可恢复！`)) {
+                    const selectedIds = Array.from(selectedCheckboxes).map(checkbox => 
+                        checkbox.closest('tr').dataset.id);
+                    
+                    operationLogs = operationLogs.filter(log => 
+                        !selectedIds.includes(log.timestamp));
+                    
+                    loadOperationLogs();
+                }
+            }
+        }
+        
+        // 加载操作日志
+        function loadOperationLogs(page = 1) {
+            currentLogPage = page;
+            const start = (page - 1) * logPageSize;
+            const end = start + logPageSize;
+            const filteredLogs = filterLogs();
+            const paginatedLogs = filteredLogs.slice(start, end);
+
+            renderLogs(paginatedLogs);
+            renderPagination(filteredLogs.length, page);
+        }
+        
+        // 筛选日志
+        function filterLogs() {
+            const typeFilter = document.getElementById('logType').value;
+            const startDate = currentFilter.startDate;
+            const endDate = currentFilter.endDate;
+
+            return operationLogs.filter(log => {
+                const logDate = new Date(log.timestamp);
+                const matchType = typeFilter === 'all' || log.type === typeFilter;
+                const matchStartDate = !startDate || logDate >= startDate;
+                const matchEndDate = !endDate || logDate <= endDate;
+                
+                return matchType && matchStartDate && matchEndDate;
+            }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        }
+        
+        // 渲染日志
+        function renderLogs(logs) {
+            const tbody = document.getElementById('logList');
+            tbody.innerHTML = '';
+            
+            if (logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">没有找到匹配的操作记录</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.dataset.id = log.timestamp;
+                row.innerHTML = `
+                    <td><input type="checkbox" class="log-checkbox"></td>
+                    <td>${new Date(log.timestamp).toLocaleString()}</td>
+                    <td>
+                        <span class="log-type ${log.type}">
+                            ${{
+                                add: '新增任务',
+                                delete: '删除任务',
+                                complete: '完成任务',
+                                incomplete: '标记未完成',
+                                edit: '编辑任务',
+                                restore: '恢复任务',
+                                system: '系统'
+                            }[log.type] || log.type}
+                        </span>
+                    </td>
+                    <td>${log.content}</td>
+                    <td>${log.operator}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // 渲染分页
+        function renderPagination(total, currentPage) {
+            const totalPages = Math.ceil(total / logPageSize);
+            const pagination = document.getElementById('logPagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let buttons = [];
+            
+            // 上一页按钮
+            buttons.push(`
+                <button class="page-btn ${currentPage === 1 ? 'disabled' : ''}" 
+                        onclick="loadOperationLogs(${currentPage - 1})" 
+                        ${currentPage === 1 ? 'disabled' : ''}>
+                    上一页
+                </button>
+            `);
+            
+            // 页码按钮
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            if (startPage > 1) {
+                buttons.push(`
+                    <button class="page-btn" onclick="loadOperationLogs(1)">1</button>
+                    ${startPage > 2 ? '<span>...</span>' : ''}
+                `);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                buttons.push(`
+                    <button class="page-btn ${i === currentPage ? 'active' : ''}" 
+                            onclick="loadOperationLogs(${i})">
+                        ${i}
+                    </button>
+                `);
+            }
+            
+            if (endPage < totalPages) {
+                buttons.push(`
+                    ${endPage < totalPages - 1 ? '<span>...</span>' : ''}
+                    <button class="page-btn" onclick="loadOperationLogs(${totalPages})">${totalPages}</button>
+                `);
+            }
+            
+            // 下一页按钮
+            buttons.push(`
+                <button class="page-btn ${currentPage === totalPages ? 'disabled' : ''}" 
+                        onclick="loadOperationLogs(${currentPage + 1})" 
+                        ${currentPage === totalPages ? 'disabled' : ''}>
+                    下一页
+                </button>
+            `);
+            
+            pagination.innerHTML = buttons.join('');
+        }
+        
+        // 从本地存储加载建议
+        function loadSuggestionsFromLocalStorage() {
+            const savedSuggestions = localStorage.getItem('taskSuggestions');
+            if (savedSuggestions) {
+                taskSuggestions = JSON.parse(savedSuggestions);
+            }
+        }
+        
+        // 自定义标签管理
+        function loadCustomTags() {
+            const savedTags = localStorage.getItem('customTags');
+            if (savedTags) {
+                customTags = JSON.parse(savedTags);
+            } else {
+                // 初始化默认标签
+                customTags = [
+                    { id: 'all', name: '全部', color: '#4361ee' },
+                    { id: 'work', name: '工作', color: '#ff4d4d' },
+                    { id: 'personal', name: '个人', color: '#2ec4b6' },
+                    { id: 'urgent', name: '紧急', color: '#ff9f1c' }
+                ];
+                saveCustomTags();
+            }
+            
+            // 渲染标签
+            renderCustomTags();
+        }
+        
+        function saveCustomTags() {
+            localStorage.setItem('customTags', JSON.stringify(customTags));
+        }
+        
+        function renderCustomTags() {
+            // 渲染列表视图标签
+            const listTagsContainer = document.getElementById('listTagsContainer');
+            listTagsContainer.innerHTML = '';
+            
+            // 渲染图片管理视图标签
+            const imageTagsContainer = document.getElementById('imageTagsContainer');
+            imageTagsContainer.innerHTML = '';
+            
+            customTags.forEach(tag => {
+                // 列表视图标签
+                const listTag = document.createElement('div');
+                listTag.className = 'custom-tag' + (tag.id === 'all' ? ' active' : '');
+                listTag.dataset.category = tag.id;
+                listTag.style.backgroundColor = tag.color;
+                listTag.style.color = 'white';
+                
+                listTag.innerHTML = `
+                    ${tag.name}
+                    <span class="custom-tag-edit" data-id="${tag.id}">✏️</span>
+                `;
+                
+                listTag.addEventListener('click', function(e) {
+                    if (!e.target.classList.contains('custom-tag-edit')) {
+                        // 激活选中的标签
+                        document.querySelectorAll('#listTagsContainer .custom-tag').forEach(t => {
+                            t.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                        
+                        // 筛选任务
+                        filterTasksByCategory(tag.id);
+                    }
+                });
+                
+                const listEditBtn = listTag.querySelector('.custom-tag-edit');
+                listEditBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    openEditTagModal(tag.id);
+                });
+                
+                listTagsContainer.appendChild(listTag);
+                
+                // 图片管理视图标签
+                const imageTag = document.createElement('div');
+                imageTag.className = 'custom-tag' + (tag.id === 'all' ? ' active' : '');
+                imageTag.dataset.category = tag.id;
+                imageTag.style.backgroundColor = tag.color;
+                imageTag.style.color = 'white';
+                
+                imageTag.innerHTML = `
+                    ${tag.name}
+                    <span class="custom-tag-edit" data-id="${tag.id}">✏️</span>
+                `;
+                
+                imageTag.addEventListener('click', function(e) {
+                    if (!e.target.classList.contains('custom-tag-edit')) {
+                        // 激活选中的标签
+                        document.querySelectorAll('#imageTagsContainer .custom-tag').forEach(t => {
+                            t.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                        
+                        // 筛选图片
+                        imageCategoryFilter = tag.id;
+                        filterImagesByCategory();
+                    }
+                });
+                
+                const imageEditBtn = imageTag.querySelector('.custom-tag-edit');
+                imageEditBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    openEditTagModal(tag.id);
+                });
+                
+                imageTagsContainer.appendChild(imageTag);
+            });
+            
+            // 添加"添加标签"按钮
+            const addListTagBtn = document.createElement('button');
+            addListTagBtn.className = 'add-tag-btn';
+            addListTagBtn.id = 'addTagBtn';
+            addListTagBtn.textContent = '+ 添加标签';
+            addListTagBtn.addEventListener('click', openEditTagModal);
+            listTagsContainer.appendChild(addListTagBtn);
+            
+            const addImageTagBtn = document.createElement('button');
+            addImageTagBtn.className = 'add-tag-btn';
+            addImageTagBtn.id = 'addImageTagBtn';
+            addImageTagBtn.textContent = '+ 添加标签';
+            addImageTagBtn.addEventListener('click', openEditTagModal);
+            imageTagsContainer.appendChild(addImageTagBtn);
+            
+            // 更新分类选择器
+            updateCategorySelectors();
+        }
+        
+        function openEditTagModal(tagId = null) {
+            editingTagId = tagId;
+            
+            if (tagId) {
+                // 编辑现有标签
+                const tag = customTags.find(t => t.id === tagId);
+                if (tag) {
+                    document.getElementById('editTagModalTitle').textContent = '编辑标签';
+                    document.getElementById('editTagName').value = tag.name;
+                    document.getElementById('editTagColor').value = tag.color;
+                }
+            } else {
+                // 添加新标签
+                document.getElementById('editTagModalTitle').textContent = '添加新标签';
+                document.getElementById('editTagName').value = '';
+                document.getElementById('editTagColor').value = '#4361ee';
+            }
+            
+            showModal('editTagModal');
+        }
+        
+        function saveEditedTag() {
+            const name = document.getElementById('editTagName').value.trim();
+            const color = document.getElementById('editTagColor').value;
+            
+            if (!name) {
+                alert('请输入标签名称');
+                return;
+            }
+            
+            if (editingTagId) {
+                // 更新现有标签
+                const tagIndex = customTags.findIndex(t => t.id === editingTagId);
+                if (tagIndex !== -1) {
+                    customTags[tagIndex].name = name;
+                    customTags[tagIndex].color = color;
+                }
+            } else {
+                // 添加新标签
+                const newId = 'tag_' + Date.now();
+                customTags.push({
+                    id: newId,
+                    name: name,
+                    color: color
+                });
+            }
+            
+            saveCustomTags();
+            renderCustomTags();
+            hideModal('editTagModal');
+            
+            // 记录操作日志
+            logOperation('system', `${editingTagId ? '编辑' : '添加'}标签："${name}"`);
+        }
+        
+        function getCategoryNameById(categoryId) {
+            const tag = customTags.find(t => t.id === categoryId);
+            return tag ? tag.name : categoryId;
+        }
+        
+        function updateCategorySelectors() {
+            // 更新任务编辑模态框的分类选择器
+            const taskCategorySelect = document.getElementById('editTaskCategory');
+            taskCategorySelect.innerHTML = '';
+            
+            // 更新图片编辑模态框的分类选择器
+            const imageCategorySelect = document.getElementById('editImageCategory');
+            imageCategorySelect.innerHTML = '';
+            
+            customTags.forEach(tag => {
+                if (tag.id !== 'all') {
+                    const taskOption = document.createElement('option');
+                    taskOption.value = tag.id;
+                    taskOption.textContent = tag.name;
+                    taskCategorySelect.appendChild(taskOption);
+                    
+                    const imageOption = document.createElement('option');
+                    imageOption.value = tag.id;
+                    imageOption.textContent = tag.name;
+                    imageCategorySelect.appendChild(imageOption);
+                }
+            });
+        }
+        
+        function filterTasksByCategory(categoryId) {
+            // 这里可以实现按分类筛选任务的功能
+            // 由于时间关系，这里只更新UI状态，实际筛选逻辑需要根据具体需求实现
+            console.log(`筛选任务分类: ${getCategoryNameById(categoryId)}`);
+        }
+        
+        // 初始化时加载建议
+        loadSuggestionsFromLocalStorage();
+    </script>
 </body>
 </html>
