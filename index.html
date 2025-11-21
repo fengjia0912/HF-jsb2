@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>何峰-专用日记</title>
-    
-    <!-- 添加蓝圈HF图标 -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234361ee'/><text x='50' y='65' font-family='Arial, sans-serif' font-size='40' text-anchor='middle' fill='white'>HF</text></svg>">
-    
+    <title>何峰-专用记事本</title>
+    <!-- 添加网站图标 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234361ee'/><text x='50' y='60' font-family='Arial, sans-serif' font-size='30' text-anchor='middle' fill='white'>HF</text></svg>">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS 客户端 -->
@@ -1941,7 +1939,7 @@
     <!-- 登录界面 -->
     <div class="login-container" id="loginContainer">
         <div class="login-logo">HF</div>
-        <h2 class="login-title">何峰-专用日记</h2>
+        <h2 class="login-title">何峰-专用记事本</h2>
         <form class="login-form" id="loginForm">
             <div class="form-group">
                 <label for="password" class="form-label">请输入密码</label>
@@ -1985,7 +1983,7 @@
         <header>
             <div class="logo">
                 <div class="logo-icon">HF</div>
-                <h1>何峰-专用日记</h1>
+                <h1>何峰-专用记事本</h1>
             </div>
             <div class="flex items-center">
                 <div class="date-display" id="currentDate"></div>
@@ -2187,7 +2185,7 @@
                     
                     <div class="upload-area" id="uploadArea">
                         <div class="upload-icon">📁</div>
-                        <div class="upload-text">拖放图片到此处或点击上传<br>或从剪贴板粘贴图片 (Ctrl+V)</div>
+                        <div class="upload-text">拖放图片到此处或点击上传<br>支持从剪贴板粘贴图片 (Ctrl+V)</div>
                         <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
                         <button class="compact-upload-btn" id="uploadBtn">选择图片</button>
                     </div>
@@ -2517,6 +2515,7 @@
     <!-- 消息提示区 -->
     <div id="message"></div>
 
+    <script src="config.js"></script>
     <script>
         // 初始化变量
         let tasks = [];
@@ -3048,14 +3047,6 @@
             document.addEventListener('click', resetInactivityTimer);
             document.addEventListener('scroll', resetInactivityTimer);
             
-            // 添加粘贴图片功能
-            document.addEventListener('paste', function(e) {
-                // 检查是否在图片管理视图
-                if (currentView === 'images') {
-                    handlePasteImage(e);
-                }
-            });
-            
             // ESC键退出登录
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
@@ -3085,28 +3076,27 @@
             
             // 初始化拖拽功能
             initDragAndDrop();
+            
+            // 添加剪贴板粘贴事件监听器
+            document.addEventListener('paste', handlePaste);
         });
         
-        // 处理粘贴图片功能
-        function handlePasteImage(e) {
+        // 处理剪贴板粘贴事件
+        function handlePaste(e) {
+            // 如果当前不在图片管理视图，则忽略粘贴事件
+            if (currentView !== 'images') return;
+            
             const items = e.clipboardData.items;
+            if (!items) return;
             
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
-                
-                // 检查是否是图片类型
                 if (item.type.indexOf('image') !== -1) {
                     const file = item.getAsFile();
                     if (file) {
-                        // 创建文件列表
-                        const fileList = new DataTransfer();
-                        fileList.items.add(file);
-                        
-                        // 调用现有的图片上传函数
-                        handleImageUpload(fileList.files);
-                        
-                        // 显示成功消息
+                        handleImageUpload([file]);
                         showMessage('图片已从剪贴板粘贴并上传', false);
+                        break;
                     }
                 }
             }
