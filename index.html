@@ -1584,6 +1584,46 @@
             margin-bottom: 5px;
         }
         
+        /* 文件夹详情视图样式 */
+        .folder-detail-view {
+            display: none;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            height: calc(100% - 40px);
+            overflow-y: auto;
+        }
+        
+        .folder-detail-view.active {
+            display: block;
+        }
+        
+        .folder-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .folder-detail-back {
+            background-color: var(--light);
+            color: var(--dark);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .folder-detail-back:hover {
+            background-color: #e9ecef;
+        }
+        
         /* 响应式设计 */
         @media (max-width: 1024px) {
             .main-content {
@@ -2178,6 +2218,19 @@
                     </div>
                 </div>
                 
+                <!-- 文件夹详情视图 -->
+                <div class="folder-detail-view" id="folderDetailView">
+                    <div class="folder-detail-header">
+                        <button class="folder-detail-back" id="folderDetailBackBtn">← 返回文件夹</button>
+                        <h3 id="folderDetailTitle">文件夹详情</h3>
+                        <div></div>
+                    </div>
+                    
+                    <div class="images-grid" id="folderImagesGrid">
+                        <!-- 文件夹内的图片将通过JS动态加载 -->
+                    </div>
+                </div>
+                
                 <!-- 图片管理视图 -->
                 <div class="images-view" id="imagesView">
                     <div class="images-header">
@@ -2492,6 +2545,10 @@
                     <label for="editTagColor">标签颜色</label>
                     <input type="color" id="editTagColor" class="form-input" value="#4361ee">
                 </div>
+                <div class="form-group">
+                    <label for="editTagTextColor">文字颜色</label>
+                    <input type="color" id="editTagTextColor" class="form-input" value="#ffffff">
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="modal-btn modal-btn-secondary" id="cancelEditTag">取消</button>
@@ -2526,7 +2583,8 @@
 
     <!-- 消息提示区 -->
     <div id="message"></div>
-  <script src="config.js"></script>
+
+    <script src="config.js"></script>
     <script>
         // 初始化变量
         let tasks = [];
@@ -2571,6 +2629,9 @@
         let customTags = [];
         let editingTagId = null;
         
+        // 当前文件夹详情
+        let currentFolderId = null;
+
         // 初始化页面
         document.addEventListener('DOMContentLoaded', function() {
             // 初始化Supabase
@@ -3043,6 +3104,11 @@
                 saveEditedFolder();
             });
             
+            // 文件夹详情返回按钮事件
+            document.getElementById('folderDetailBackBtn').addEventListener('click', function() {
+                showFoldersView();
+            });
+            
             // 加载保存的数据
             loadViewPreference();
             
@@ -3183,7 +3249,7 @@
                         data: imageData,
                         description: '',
                         category: 'all',
-                        folder: 'default',
+                        folder: currentFolderId || 'default',
                         size: file.size,
                         uploadedAt: new Date().toISOString()
                     };
@@ -3193,6 +3259,9 @@
                         if (savedImage) {
                             images.push(savedImage);
                             renderImage(savedImage);
+                            
+                            // 更新文件夹统计信息
+                            updateFolderStats(newImage.folder);
                             
                             // 记录操作日志
                             logOperation('system', `上传图片：${file.name}`);
@@ -3214,6 +3283,7 @@
             imageCard.className = 'image-card';
             imageCard.dataset.id = image.id;
             imageCard.dataset.category = image.category;
+            imageCard.draggable = true;
             
             const uploadDate = new Date(image.uploadedAt).toLocaleDateString();
             const categoryText = getCategoryNameById(image.category);
@@ -3251,6 +3321,17 @@
             const deleteBtn = imageCard.querySelector('.delete-image-btn');
             deleteBtn.addEventListener('click', function() {
                 deleteImage(image.id);
+            });
+            
+            // 添加拖拽事件
+            imageCard.addEventListener('dragstart', function(e) {
+                e.dataTransfer.setData('text/plain', image.id);
+                e.dataTransfer.effectAllowed = 'move';
+                this.classList.add('dragging');
+            });
+            
+            imageCard.addEventListener('dragend', function() {
+                this.classList.remove('dragging');
             });
             
             imagesGrid.appendChild(imageCard);
@@ -3321,6 +3402,12 @@
                             document.querySelector(`.image-card[data-id="${editingImageId}"]`).remove();
                             renderImage(image);
                             
+                            // 更新文件夹统计信息
+                            if (oldFolder !== image.folder) {
+                                updateFolderStats(oldFolder);
+                                updateFolderStats(image.folder);
+                            }
+                            
                             // 应用分类筛选
                             filterImagesByCategory();
                             
@@ -3343,6 +3430,9 @@
                         if (success) {
                             // 记录操作日志
                             logOperation('delete', `删除图片：${image.name}`);
+                            
+                            // 更新文件夹统计信息
+                            updateFolderStats(image.folder);
                             
                             images.splice(imageIndex, 1);
                             document.querySelector(`.image-card[data-id="${imageId}"]`).remove();
@@ -3431,6 +3521,7 @@
                 const folderCard = document.createElement('div');
                 folderCard.className = 'folder-card';
                 folderCard.dataset.id = folder.id;
+                folderCard.draggable = true;
                 
                 const createdDate = new Date(folder.createdAt).toLocaleString();
                 const updatedDate = new Date(folder.updatedAt).toLocaleString();
@@ -3466,29 +3557,170 @@
                 });
                 
                 folderCard.addEventListener('click', function() {
-                    // 切换到图片管理视图并筛选该文件夹的图片
-                    currentView = 'images';
-                    document.querySelectorAll('.tab').forEach(tab => {
-                        tab.classList.remove('active');
-                        if (tab.dataset.view === 'images') {
-                            tab.classList.add('active');
-                        }
-                    });
-                    switchView('images');
+                    showFolderDetail(folder.id);
+                });
+                
+                // 添加拖拽事件
+                folderCard.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('drag-over');
+                });
+                
+                folderCard.addEventListener('dragleave', function() {
+                    this.classList.remove('drag-over');
+                });
+                
+                folderCard.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
                     
-                    // 筛选该文件夹的图片
-                    imageCategoryFilter = folder.id;
-                    document.querySelectorAll('#imageTagsContainer .custom-tag').forEach(tag => {
-                        tag.classList.remove('active');
-                        if (tag.dataset.category === folder.id) {
-                            tag.classList.add('active');
-                        }
-                    });
-                    filterImagesByCategory();
+                    const imageId = e.dataTransfer.getData('text/plain');
+                    moveImageToFolder(imageId, folder.id);
                 });
                 
                 foldersGrid.appendChild(folderCard);
             });
+        }
+        
+        function showFolderDetail(folderId) {
+            currentFolderId = folderId;
+            const folder = folders.find(f => f.id === folderId);
+            
+            if (folder) {
+                document.getElementById('folderDetailTitle').textContent = folder.name;
+                document.getElementById('foldersView').classList.remove('active');
+                document.getElementById('folderDetailView').classList.add('active');
+                
+                renderFolderImages(folderId);
+            }
+        }
+        
+        function showFoldersView() {
+            currentFolderId = null;
+            document.getElementById('folderDetailView').classList.remove('active');
+            document.getElementById('foldersView').classList.add('active');
+        }
+        
+        function renderFolderImages(folderId) {
+            const folderImagesGrid = document.getElementById('folderImagesGrid');
+            folderImagesGrid.innerHTML = '';
+            
+            const folderImages = images.filter(img => img.folder === folderId);
+            
+            if (folderImages.length === 0) {
+                folderImagesGrid.innerHTML = '<div class="empty-state">此文件夹暂无图片</div>';
+                return;
+            }
+            
+            folderImages.forEach(image => {
+                const imageCard = document.createElement('div');
+                imageCard.className = 'image-card';
+                imageCard.dataset.id = image.id;
+                imageCard.dataset.category = image.category;
+                imageCard.draggable = true;
+                
+                const uploadDate = new Date(image.uploadedAt).toLocaleDateString();
+                const categoryText = getCategoryNameById(image.category);
+                const sizeText = formatFileSize(image.size);
+                
+                imageCard.innerHTML = `
+                    <div class="image-container">
+                        <img data-src="${image.data}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org2000/svg' width='200' height='150' viewBox='0 0 200 150'%3E%3Crect width='200' height='150' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23999'%3E加载中...%3C/text%3E%3C/svg%3E" alt="${image.name}" class="lazy" loading="lazy">
+                    </div>
+                    <div class="image-info">
+                        <div class="image-title">${image.name}</div>
+                        <div class="image-date">${uploadDate}</div>
+                        <div class="image-size">${sizeText}</div>
+                        <div class="image-category">${categoryText}</div>
+                        <div class="image-actions">
+                            <button class="image-action view-image-btn">👁️</button>
+                            <button class="image-action edit-image-btn">✏️</button>
+                            <button class="image-action delete-image-btn">🗑️</button>
+                        </div>
+                    </div>
+                `;
+                
+                // 添加事件监听器
+                const viewBtn = imageCard.querySelector('.view-image-btn');
+                viewBtn.addEventListener('click', function() {
+                    viewImage(image);
+                });
+                
+                const editBtn = imageCard.querySelector('.edit-image-btn');
+                editBtn.addEventListener('click', function() {
+                    openEditImageModal(image.id);
+                });
+                
+                const deleteBtn = imageCard.querySelector('.delete-image-btn');
+                deleteBtn.addEventListener('click', function() {
+                    deleteImage(image.id);
+                });
+                
+                // 添加拖拽事件
+                imageCard.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', image.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    this.classList.add('dragging');
+                });
+                
+                imageCard.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                });
+                
+                folderImagesGrid.appendChild(imageCard);
+                
+                // 懒加载图片
+                const img = imageCard.querySelector('img');
+                if (imageObserver) {
+                    imageObserver.observe(img);
+                } else {
+                    img.src = img.dataset.src;
+                    img.classList.remove('lazy');
+                }
+            });
+        }
+        
+        function moveImageToFolder(imageId, folderId) {
+            const image = images.find(img => img.id === imageId);
+            if (image) {
+                const oldFolder = image.folder;
+                image.folder = folderId;
+                
+                // 保存到数据库
+                saveImageToDatabase(image).then(savedImage => {
+                    if (savedImage) {
+                        // 更新文件夹统计信息
+                        updateFolderStats(oldFolder);
+                        updateFolderStats(folderId);
+                        
+                        // 记录操作日志
+                        logOperation('edit', `将图片"${image.name}"移动到文件夹"${getFolderNameById(folderId)}"`);
+                        
+                        // 重新渲染视图
+                        if (currentView === 'images') {
+                            document.querySelector(`.image-card[data-id="${imageId}"]`).remove();
+                            renderImage(image);
+                        } else if (currentView === 'folders' && currentFolderId === oldFolder) {
+                            document.querySelector(`.image-card[data-id="${imageId}"]`).remove();
+                            renderFolderImages(currentFolderId);
+                        }
+                    }
+                });
+            }
+        }
+        
+        function updateFolderStats(folderId) {
+            const folderImages = images.filter(img => img.folder === folderId);
+            const folder = folders.find(f => f.id === folderId);
+            
+            if (folder) {
+                folder.imageCount = folderImages.length;
+                folder.totalSize = folderImages.reduce((total, img) => total + (img.size || 0), 0);
+                folder.updatedAt = new Date().toISOString();
+                
+                saveFolders();
+                renderFolders();
+            }
         }
         
         function openEditFolderModal(folderId = null) {
@@ -3598,6 +3830,11 @@
             saveFolders();
             renderFolders();
             updateFolderSelectors();
+            
+            // 如果当前在文件夹详情视图，返回文件夹列表
+            if (currentFolderId === folderId) {
+                showFoldersView();
+            }
         }
         
         function getFolderNameById(folderId) {
@@ -3800,6 +4037,11 @@
                         renderImage(image);
                     });
                     
+                    // 更新文件夹统计信息
+                    folders.forEach(folder => {
+                        updateFolderStats(folder.id);
+                    });
+                    
                     showMessage('图片已从服务器加载', false);
                 }
             } catch (error) {
@@ -3811,108 +4053,21 @@
         // 初始化Supabase
         function initSupabase() {
             try {
-                // 检查是否提供了Supabase配置
                 if (window.supabaseConfig && window.supabaseConfig.SUPABASE_URL && window.supabaseConfig.SUPABASE_ANON_KEY) {
                     supabase = window.supabase.createClient(window.supabaseConfig.SUPABASE_URL, window.supabaseConfig.SUPABASE_ANON_KEY);
                     console.log('Supabase初始化成功');
-                    
-                    // 加载数据
                     loadTasksFromDatabase();
                     loadLogsFromDatabase();
                     loadImagesFromDatabase();
                     loadTagsFromDatabase();
                 } else {
-                    console.warn('Supabase配置未设置，使用本地存储');
-                    showMessage('数据库连接配置缺失，使用本地存储', true);
-                    
-                    // 从本地存储加载数据
-                    loadTasksFromLocalStorage();
-                    loadLogsFromLocalStorage();
-                    loadImagesFromLocalStorage();
-                    loadTagsFromLocalStorage();
+                    console.warn('Supabase配置未设置');
+                    showMessage('数据库连接配置缺失，部分功能可能无法使用', true);
                 }
             } catch (error) {
                 console.error('Supabase初始化失败:', error);
-                showMessage('连接服务器失败，使用本地存储', true);
-                
-                // 从本地存储加载数据
-                loadTasksFromLocalStorage();
-                loadLogsFromLocalStorage();
-                loadImagesFromLocalStorage();
-                loadTagsFromLocalStorage();
+                showMessage('连接服务器失败', true);
             }
-        }
-        
-        // 从本地存储加载任务
-        function loadTasksFromLocalStorage() {
-            const savedTasks = localStorage.getItem('tasks');
-            if (savedTasks) {
-                tasks = JSON.parse(savedTasks);
-                
-                // 清空现有任务列表
-                document.querySelectorAll('.task-list').forEach(list => {
-                    list.innerHTML = '';
-                });
-                
-                // 重新渲染所有任务
-                tasks.forEach(task => {
-                    renderTask(task);
-                });
-                
-                updateTaskStats();
-            }
-        }
-        
-        // 从本地存储加载操作日志
-        function loadLogsFromLocalStorage() {
-            const savedLogs = localStorage.getItem('operationLogs');
-            if (savedLogs) {
-                operationLogs = JSON.parse(savedLogs);
-            }
-        }
-        
-        // 从本地存储加载图片
-        function loadImagesFromLocalStorage() {
-            const savedImages = localStorage.getItem('images');
-            if (savedImages) {
-                images = JSON.parse(savedImages);
-                
-                // 清空现有图片网格
-                document.getElementById('imagesGrid').innerHTML = '';
-                
-                // 重新渲染所有图片
-                images.forEach(image => {
-                    renderImage(image);
-                });
-            }
-        }
-        
-        // 从本地存储加载标签
-        function loadTagsFromLocalStorage() {
-            const savedTags = localStorage.getItem('customTags');
-            if (savedTags) {
-                customTags = JSON.parse(savedTags);
-                
-                // 重新渲染标签
-                renderCustomTags();
-            } else {
-                // 初始化默认标签
-                customTags = [
-                    {
-                        id: 'all',
-                        name: '全部',
-                        color: '#4361ee',
-                        createdAt: new Date().toISOString()
-                    }
-                ];
-                saveTagsToLocalStorage();
-                renderCustomTags();
-            }
-        }
-        
-        // 保存标签到本地存储
-        function saveTagsToLocalStorage() {
-            localStorage.setItem('customTags', JSON.stringify(customTags));
         }
         
         // 从数据库加载任务
@@ -4033,6 +4188,7 @@
                             id: item.id,
                             name: item.name,
                             color: item.color,
+                            text_color: item.text_color || '#ffffff',
                             createdAt: item.created_at
                         };
                         customTags.push(tag);
@@ -4051,10 +4207,7 @@
         
         // 将任务保存到数据库
         async function saveTaskToDatabase(task) {
-            if (!supabase) {
-                // 如果没有Supabase，使用本地存储
-                return saveTaskToLocalStorage(task);
-            }
+            if (!supabase) return null;
             
             try {
                 const taskData = {
@@ -4095,32 +4248,9 @@
                 return task;
             } catch (error) {
                 console.error('保存任务到数据库失败:', error);
-                showMessage('同步到服务器失败，使用本地存储', true);
-                return saveTaskToLocalStorage(task);
+                showMessage('同步到服务器失败', true);
+                return null;
             }
-        }
-        
-        // 将任务保存到本地存储
-        function saveTaskToLocalStorage(task) {
-            if (!task.id) {
-                task.id = Date.now();
-            }
-            
-            // 查找现有任务
-            const existingIndex = tasks.findIndex(t => t.id === task.id);
-            
-            if (existingIndex !== -1) {
-                // 更新现有任务
-                tasks[existingIndex] = task;
-            } else {
-                // 添加新任务
-                tasks.push(task);
-            }
-            
-            // 保存到本地存储
-            localStorage.setItem('tasks', JSON.stringify(tasks));
-            
-            return task;
         }
         
         // 更新数据库中的任务
@@ -4130,10 +4260,7 @@
         
         // 从数据库删除任务
         async function deleteTaskFromDatabase(taskId) {
-            if (!supabase) {
-                // 如果没有Supabase，使用本地存储
-                return deleteTaskFromLocalStorage(taskId);
-            }
+            if (!supabase) return false;
             
             try {
                 const { error } = await supabase
@@ -4149,24 +4276,14 @@
                 return true;
             } catch (error) {
                 console.error('从数据库删除任务失败:', error);
-                showMessage('从服务器删除任务失败，使用本地存储', true);
-                return deleteTaskFromLocalStorage(taskId);
+                showMessage('从服务器删除任务失败', true);
+                return false;
             }
-        }
-        
-        // 从本地存储删除任务
-        function deleteTaskFromLocalStorage(taskId) {
-            tasks = tasks.filter(t => t.id !== taskId);
-            localStorage.setItem('tasks', JSON.stringify(tasks));
-            return true;
         }
         
         // 保存操作日志到数据库
         async function saveLogToDatabase(logEntry) {
-            if (!supabase) {
-                // 如果没有Supabase，使用本地存储
-                return saveLogToLocalStorage(logEntry);
-            }
+            if (!supabase) return false;
             
             try {
                 const logData = {
@@ -4187,28 +4304,19 @@
                 return true;
             } catch (error) {
                 console.error('保存操作日志到数据库失败:', error);
-                return saveLogToLocalStorage(logEntry);
+                return false;
             }
-        }
-        
-        // 保存操作日志到本地存储
-        function saveLogToLocalStorage(logEntry) {
-            operationLogs.push(logEntry);
-            localStorage.setItem('operationLogs', JSON.stringify(operationLogs));
-            return true;
         }
         
         // 保存标签到数据库
         async function saveTagToDatabase(tag) {
-            if (!supabase) {
-                // 如果没有Supabase，使用本地存储
-                return saveTagToLocalStorage(tag);
-            }
+            if (!supabase) return null;
             
             try {
                 const tagData = {
                     name: tag.name,
                     color: tag.color,
+                    text_color: tag.text_color,
                     created_at: tag.createdAt || new Date().toISOString()
                 };
                 
@@ -4241,40 +4349,14 @@
                 return tag;
             } catch (error) {
                 console.error('保存标签到数据库失败:', error);
-                showMessage('同步标签到服务器失败，使用本地存储', true);
-                return saveTagToLocalStorage(tag);
+                showMessage('同步标签到服务器失败', true);
+                return null;
             }
-        }
-        
-        // 保存标签到本地存储
-        function saveTagToLocalStorage(tag) {
-            if (!tag.id) {
-                tag.id = 'tag_' + Date.now();
-            }
-            
-            // 查找现有标签
-            const existingIndex = customTags.findIndex(t => t.id === tag.id);
-            
-            if (existingIndex !== -1) {
-                // 更新现有标签
-                customTags[existingIndex] = tag;
-            } else {
-                // 添加新标签
-                customTags.push(tag);
-            }
-            
-            // 保存到本地存储
-            saveTagsToLocalStorage();
-            
-            return tag;
         }
         
         // 从数据库删除标签
         async function deleteTagFromDatabase(tagId) {
-            if (!supabase) {
-                // 如果没有Supabase，使用本地存储
-                return deleteTagFromLocalStorage(tagId);
-            }
+            if (!supabase) return false;
             
             try {
                 const { error } = await supabase
@@ -4290,16 +4372,9 @@
                 return true;
             } catch (error) {
                 console.error('从数据库删除标签失败:', error);
-                showMessage('从服务器删除标签失败，使用本地存储', true);
-                return deleteTagFromLocalStorage(tagId);
+                showMessage('从服务器删除标签失败', true);
+                return false;
             }
-        }
-        
-        // 从本地存储删除标签
-        function deleteTagFromLocalStorage(tagId) {
-            customTags = customTags.filter(t => t.id !== tagId);
-            saveTagsToLocalStorage();
-            return true;
         }
         
         // 显示消息
@@ -4550,6 +4625,7 @@
             document.getElementById('quadrantView').style.display = view === 'quadrant' ? 'grid' : 'none';
             document.getElementById('listView').classList.toggle('active', view === 'list');
             document.getElementById('foldersView').classList.toggle('active', view === 'folders');
+            document.getElementById('folderDetailView').classList.toggle('active', false);
             document.getElementById('imagesView').classList.toggle('active', view === 'images');
             document.getElementById('analyticsView').classList.toggle('active', view === 'analytics');
             document.getElementById('logView').classList.toggle('active', view === 'log');
@@ -5646,7 +5722,7 @@
             
             switch (quickFilter) {
                 case 'today':
-                    startDate = new Date(today);
+                    startDate = today;
                     endDate = new Date(today);
                     endDate.setHours(23, 59, 59, 999);
                     break;
@@ -5953,13 +6029,8 @@
         
         // 自定义标签管理
         function loadCustomTags() {
-            if (supabase) {
-                // 从数据库加载标签
-                loadTagsFromDatabase();
-            } else {
-                // 从本地存储加载标签
-                loadTagsFromLocalStorage();
-            }
+            // 从数据库加载标签
+            loadTagsFromDatabase();
         }
         
         function renderCustomTags() {
@@ -5977,7 +6048,7 @@
                 listTag.className = 'custom-tag' + (tag.id === 'all' ? ' active' : '');
                 listTag.dataset.category = tag.id;
                 listTag.style.backgroundColor = tag.color;
-                listTag.style.color = 'white';
+                listTag.style.color = tag.text_color || '#ffffff';
                 
                 listTag.innerHTML = `
                     ${tag.name}
@@ -6017,7 +6088,7 @@
                 imageTag.className = 'custom-tag' + (tag.id === 'all' ? ' active' : '');
                 imageTag.dataset.category = tag.id;
                 imageTag.style.backgroundColor = tag.color;
-                imageTag.style.color = 'white';
+                imageTag.style.color = tag.text_color || '#ffffff';
                 
                 imageTag.innerHTML = `
                     ${tag.name}
@@ -6083,12 +6154,14 @@
                     document.getElementById('editTagModalTitle').textContent = '编辑标签';
                     document.getElementById('editTagName').value = tag.name;
                     document.getElementById('editTagColor').value = tag.color;
+                    document.getElementById('editTagTextColor').value = tag.text_color || '#ffffff';
                 }
             } else {
                 // 添加新标签
                 document.getElementById('editTagModalTitle').textContent = '添加新标签';
                 document.getElementById('editTagName').value = '';
                 document.getElementById('editTagColor').value = '#4361ee';
+                document.getElementById('editTagTextColor').value = '#ffffff';
             }
             
             showModal('editTagModal');
@@ -6097,22 +6170,23 @@
         async function saveEditedTag() {
             const name = document.getElementById('editTagName').value.trim();
             const color = document.getElementById('editTagColor').value;
+            const textColor = document.getElementById('editTagTextColor').value;
             
             if (!name) {
                 alert('请输入标签名称');
                 return;
             }
             
-            let savedTag;
             if (editingTagId) {
                 // 更新现有标签
                 const tagIndex = customTags.findIndex(t => t.id === editingTagId);
                 if (tagIndex !== -1) {
                     customTags[tagIndex].name = name;
                     customTags[tagIndex].color = color;
+                    customTags[tagIndex].text_color = textColor;
                     
                     // 保存到数据库
-                    savedTag = await saveTagToDatabase(customTags[tagIndex]);
+                    const savedTag = await saveTagToDatabase(customTags[tagIndex]);
                     if (savedTag) {
                         // 记录操作日志
                         logOperation('edit', `编辑标签："${name}"`);
@@ -6123,11 +6197,12 @@
                 const newTag = {
                     name: name,
                     color: color,
+                    text_color: textColor,
                     createdAt: new Date().toISOString()
                 };
                 
                 // 保存到数据库
-                savedTag = await saveTagToDatabase(newTag);
+                const savedTag = await saveTagToDatabase(newTag);
                 if (savedTag) {
                     customTags.push(savedTag);
                     
@@ -6136,11 +6211,9 @@
                 }
             }
             
-            if (savedTag) {
-                // 重新渲染标签
-                renderCustomTags();
-                hideModal('editTagModal');
-            }
+            // 重新渲染标签
+            renderCustomTags();
+            hideModal('editTagModal');
         }
         
         async function deleteTag(tagId) {
