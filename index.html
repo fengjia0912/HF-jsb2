@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>何峰-专用记事本</title>
     <!-- 添加网站图标 -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234361ee'/><text x='50' y='60' font-family='Arial, sans-serif' font-size='30' text-anchor='middle' fill='white'>HF</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234361ee'/><text x='50' y='65' font-family='Arial, sans-serif' font-size='40' text-anchor='middle' fill='white' font-weight='bold'>HF</text></svg>">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS 客户端 -->
@@ -1835,6 +1835,18 @@
             opacity: 1;
         }
         
+        .custom-tag-delete {
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        
+        .custom-tag-delete:hover {
+            opacity: 1;
+            color: var(--danger);
+        }
+        
         .add-tag-btn {
             background-color: var(--success);
             color: white;
@@ -2515,7 +2527,6 @@
     <!-- 消息提示区 -->
     <div id="message"></div>
 
-    <script src="config.js"></script>
     <script>
         // 初始化变量
         let tasks = [];
@@ -3806,6 +3817,7 @@
                     loadTasksFromDatabase();
                     loadLogsFromDatabase();
                     loadImagesFromDatabase();
+                    loadTagsFromDatabase();
                 } else {
                     console.warn('Supabase配置未设置');
                     showMessage('数据库连接配置缺失，部分功能可能无法使用', true);
@@ -3908,6 +3920,48 @@
             }
         }
         
+        // 从数据库加载标签
+        async function loadTagsFromDatabase() {
+            if (!supabase) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('tags')
+                    .select('*')
+                    .order('created_at', { ascending: true });
+                
+                if (error) {
+                    console.error('加载标签失败:', error);
+                    showMessage('从服务器加载标签失败', true);
+                    return;
+                }
+                
+                // 清空现有标签
+                customTags = [];
+                
+                // 将数据库中的数据转换为应用格式
+                if (data && data.length > 0) {
+                    data.forEach(item => {
+                        const tag = {
+                            id: item.id,
+                            name: item.name,
+                            color: item.color,
+                            createdAt: item.created_at
+                        };
+                        customTags.push(tag);
+                    });
+                    
+                    // 重新渲染标签
+                    renderCustomTags();
+                    
+                    showMessage('标签已从服务器加载', false);
+                }
+            } catch (error) {
+                console.error('加载标签异常:', error);
+                showMessage('加载标签过程中发生错误', true);
+            }
+        }
+        
         // 将任务保存到数据库
         async function saveTaskToDatabase(task) {
             if (!supabase) return null;
@@ -4007,6 +4061,74 @@
                 return true;
             } catch (error) {
                 console.error('保存操作日志到数据库失败:', error);
+                return false;
+            }
+        }
+        
+        // 保存标签到数据库
+        async function saveTagToDatabase(tag) {
+            if (!supabase) return null;
+            
+            try {
+                const tagData = {
+                    name: tag.name,
+                    color: tag.color,
+                    created_at: tag.createdAt || new Date().toISOString()
+                };
+                
+                let result;
+                if (tag.id) {
+                    // 更新现有标签
+                    result = await supabase
+                        .from('tags')
+                        .update(tagData)
+                        .eq('id', tag.id)
+                        .select();
+                } else {
+                    // 创建新标签
+                    result = await supabase
+                        .from('tags')
+                        .insert([tagData])
+                        .select();
+                    
+                    // 获取新创建的标签ID
+                    if (result.data && result.data.length > 0) {
+                        tag.id = result.data[0].id;
+                    }
+                }
+                
+                if (result.error) {
+                    throw result.error;
+                }
+                
+                showMessage('标签已保存到云端', false);
+                return tag;
+            } catch (error) {
+                console.error('保存标签到数据库失败:', error);
+                showMessage('同步标签到服务器失败', true);
+                return null;
+            }
+        }
+        
+        // 从数据库删除标签
+        async function deleteTagFromDatabase(tagId) {
+            if (!supabase) return false;
+            
+            try {
+                const { error } = await supabase
+                    .from('tags')
+                    .delete()
+                    .eq('id', tagId);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                showMessage('标签已从云端删除', false);
+                return true;
+            } catch (error) {
+                console.error('从数据库删除标签失败:', error);
+                showMessage('从服务器删除标签失败', true);
                 return false;
             }
         }
@@ -5662,26 +5784,8 @@
         
         // 自定义标签管理
         function loadCustomTags() {
-            const savedTags = localStorage.getItem('customTags');
-            if (savedTags) {
-                customTags = JSON.parse(savedTags);
-            } else {
-                // 初始化默认标签
-                customTags = [
-                    { id: 'all', name: '全部', color: '#4361ee' },
-                    { id: 'work', name: '工作', color: '#ff4d4d' },
-                    { id: 'personal', name: '个人', color: '#2ec4b6' },
-                    { id: 'urgent', name: '紧急', color: '#ff9f1c' }
-                ];
-                saveCustomTags();
-            }
-            
-            // 渲染标签
-            renderCustomTags();
-        }
-        
-        function saveCustomTags() {
-            localStorage.setItem('customTags', JSON.stringify(customTags));
+            // 从数据库加载标签
+            loadTagsFromDatabase();
         }
         
         function renderCustomTags() {
@@ -5704,10 +5808,11 @@
                 listTag.innerHTML = `
                     ${tag.name}
                     <span class="custom-tag-edit" data-id="${tag.id}">✏️</span>
+                    <span class="custom-tag-delete" data-id="${tag.id}">🗑️</span>
                 `;
                 
                 listTag.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('custom-tag-edit')) {
+                    if (!e.target.classList.contains('custom-tag-edit') && !e.target.classList.contains('custom-tag-delete')) {
                         // 激活选中的标签
                         document.querySelectorAll('#listTagsContainer .custom-tag').forEach(t => {
                             t.classList.remove('active');
@@ -5725,6 +5830,12 @@
                     openEditTagModal(tag.id);
                 });
                 
+                const listDeleteBtn = listTag.querySelector('.custom-tag-delete');
+                listDeleteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    deleteTag(tag.id);
+                });
+                
                 listTagsContainer.appendChild(listTag);
                 
                 // 图片管理视图标签
@@ -5737,10 +5848,11 @@
                 imageTag.innerHTML = `
                     ${tag.name}
                     <span class="custom-tag-edit" data-id="${tag.id}">✏️</span>
+                    <span class="custom-tag-delete" data-id="${tag.id}">🗑️</span>
                 `;
                 
                 imageTag.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('custom-tag-edit')) {
+                    if (!e.target.classList.contains('custom-tag-edit') && !e.target.classList.contains('custom-tag-delete')) {
                         // 激活选中的标签
                         document.querySelectorAll('#imageTagsContainer .custom-tag').forEach(t => {
                             t.classList.remove('active');
@@ -5757,6 +5869,12 @@
                 imageEditBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     openEditTagModal(tag.id);
+                });
+                
+                const imageDeleteBtn = imageTag.querySelector('.custom-tag-delete');
+                imageDeleteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    deleteTag(tag.id);
                 });
                 
                 imageTagsContainer.appendChild(imageTag);
@@ -5802,7 +5920,7 @@
             showModal('editTagModal');
         }
         
-        function saveEditedTag() {
+        async function saveEditedTag() {
             const name = document.getElementById('editTagName').value.trim();
             const color = document.getElementById('editTagColor').value;
             
@@ -5817,23 +5935,61 @@
                 if (tagIndex !== -1) {
                     customTags[tagIndex].name = name;
                     customTags[tagIndex].color = color;
+                    
+                    // 保存到数据库
+                    const savedTag = await saveTagToDatabase(customTags[tagIndex]);
+                    if (savedTag) {
+                        // 记录操作日志
+                        logOperation('edit', `编辑标签："${name}"`);
+                    }
                 }
             } else {
                 // 添加新标签
-                const newId = 'tag_' + Date.now();
-                customTags.push({
-                    id: newId,
+                const newTag = {
                     name: name,
-                    color: color
-                });
+                    color: color,
+                    createdAt: new Date().toISOString()
+                };
+                
+                // 保存到数据库
+                const savedTag = await saveTagToDatabase(newTag);
+                if (savedTag) {
+                    customTags.push(savedTag);
+                    
+                    // 记录操作日志
+                    logOperation('add', `添加标签："${name}"`);
+                }
             }
             
-            saveCustomTags();
+            // 重新渲染标签
             renderCustomTags();
             hideModal('editTagModal');
+        }
+        
+        async function deleteTag(tagId) {
+            if (tagId === 'all') {
+                alert('"全部"标签不能删除');
+                return;
+            }
             
-            // 记录操作日志
-            logOperation('system', `${editingTagId ? '编辑' : '添加'}标签："${name}"`);
+            const tag = customTags.find(t => t.id === tagId);
+            if (!tag) return;
+            
+            const confirmDelete = confirm(`确定要删除标签"${tag.name}"吗？`);
+            if (!confirmDelete) return;
+            
+            // 从数据库删除
+            const success = await deleteTagFromDatabase(tagId);
+            if (success) {
+                // 从本地数组中移除
+                customTags = customTags.filter(t => t.id !== tagId);
+                
+                // 重新渲染标签
+                renderCustomTags();
+                
+                // 记录操作日志
+                logOperation('delete', `删除标签："${tag.name}"`);
+            }
         }
         
         function getCategoryNameById(categoryId) {
