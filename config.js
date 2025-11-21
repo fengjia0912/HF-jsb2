@@ -1,4 +1,4 @@
-// 数据库配置文件
+// 数据库配置文件何
 // 注意：请将此文件添加到.gitignore中，不要提交到GitHub仓库
 
 window.supabaseConfig = {
