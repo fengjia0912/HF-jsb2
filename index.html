@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>何峰-专用记事本</title>
+    
+    <!-- 添加蓝圈HF图标 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234361ee'/><text x='50' y='65' font-family='Arial, sans-serif' font-size='40' text-anchor='middle' fill='white'>HF</text></svg>">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS 客户端 -->
@@ -2183,7 +2187,7 @@
                     
                     <div class="upload-area" id="uploadArea">
                         <div class="upload-icon">📁</div>
-                        <div class="upload-text">拖放图片到此处或点击上传</div>
+                        <div class="upload-text">拖放图片到此处或点击上传<br>或从剪贴板粘贴图片 (Ctrl+V)</div>
                         <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
                         <button class="compact-upload-btn" id="uploadBtn">选择图片</button>
                     </div>
@@ -2513,7 +2517,6 @@
     <!-- 消息提示区 -->
     <div id="message"></div>
 
-    <script src="config.js"></script>
     <script>
         // 初始化变量
         let tasks = [];
@@ -3045,6 +3048,14 @@
             document.addEventListener('click', resetInactivityTimer);
             document.addEventListener('scroll', resetInactivityTimer);
             
+            // 添加粘贴图片功能
+            document.addEventListener('paste', function(e) {
+                // 检查是否在图片管理视图
+                if (currentView === 'images') {
+                    handlePasteImage(e);
+                }
+            });
+            
             // ESC键退出登录
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
@@ -3075,6 +3086,31 @@
             // 初始化拖拽功能
             initDragAndDrop();
         });
+        
+        // 处理粘贴图片功能
+        function handlePasteImage(e) {
+            const items = e.clipboardData.items;
+            
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                
+                // 检查是否是图片类型
+                if (item.type.indexOf('image') !== -1) {
+                    const file = item.getAsFile();
+                    if (file) {
+                        // 创建文件列表
+                        const fileList = new DataTransfer();
+                        fileList.items.add(file);
+                        
+                        // 调用现有的图片上传函数
+                        handleImageUpload(fileList.files);
+                        
+                        // 显示成功消息
+                        showMessage('图片已从剪贴板粘贴并上传', false);
+                    }
+                }
+            }
+        }
         
         // 初始化图片懒加载
         function initImageLazyLoading() {
