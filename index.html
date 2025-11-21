@@ -2526,7 +2526,7 @@
 
     <!-- 消息提示区 -->
     <div id="message"></div>
-  <script src="config.js"></script>
+<script src="config.js"></script>
     <script>
         // 初始化变量
         let tasks = [];
@@ -3811,21 +3811,108 @@
         // 初始化Supabase
         function initSupabase() {
             try {
+                // 检查是否提供了Supabase配置
                 if (window.supabaseConfig && window.supabaseConfig.SUPABASE_URL && window.supabaseConfig.SUPABASE_ANON_KEY) {
                     supabase = window.supabase.createClient(window.supabaseConfig.SUPABASE_URL, window.supabaseConfig.SUPABASE_ANON_KEY);
                     console.log('Supabase初始化成功');
+                    
+                    // 加载数据
                     loadTasksFromDatabase();
                     loadLogsFromDatabase();
                     loadImagesFromDatabase();
                     loadTagsFromDatabase();
                 } else {
-                    console.warn('Supabase配置未设置');
-                    showMessage('数据库连接配置缺失，部分功能可能无法使用', true);
+                    console.warn('Supabase配置未设置，使用本地存储');
+                    showMessage('数据库连接配置缺失，使用本地存储', true);
+                    
+                    // 从本地存储加载数据
+                    loadTasksFromLocalStorage();
+                    loadLogsFromLocalStorage();
+                    loadImagesFromLocalStorage();
+                    loadTagsFromLocalStorage();
                 }
             } catch (error) {
                 console.error('Supabase初始化失败:', error);
-                showMessage('连接服务器失败', true);
+                showMessage('连接服务器失败，使用本地存储', true);
+                
+                // 从本地存储加载数据
+                loadTasksFromLocalStorage();
+                loadLogsFromLocalStorage();
+                loadImagesFromLocalStorage();
+                loadTagsFromLocalStorage();
             }
+        }
+        
+        // 从本地存储加载任务
+        function loadTasksFromLocalStorage() {
+            const savedTasks = localStorage.getItem('tasks');
+            if (savedTasks) {
+                tasks = JSON.parse(savedTasks);
+                
+                // 清空现有任务列表
+                document.querySelectorAll('.task-list').forEach(list => {
+                    list.innerHTML = '';
+                });
+                
+                // 重新渲染所有任务
+                tasks.forEach(task => {
+                    renderTask(task);
+                });
+                
+                updateTaskStats();
+            }
+        }
+        
+        // 从本地存储加载操作日志
+        function loadLogsFromLocalStorage() {
+            const savedLogs = localStorage.getItem('operationLogs');
+            if (savedLogs) {
+                operationLogs = JSON.parse(savedLogs);
+            }
+        }
+        
+        // 从本地存储加载图片
+        function loadImagesFromLocalStorage() {
+            const savedImages = localStorage.getItem('images');
+            if (savedImages) {
+                images = JSON.parse(savedImages);
+                
+                // 清空现有图片网格
+                document.getElementById('imagesGrid').innerHTML = '';
+                
+                // 重新渲染所有图片
+                images.forEach(image => {
+                    renderImage(image);
+                });
+            }
+        }
+        
+        // 从本地存储加载标签
+        function loadTagsFromLocalStorage() {
+            const savedTags = localStorage.getItem('customTags');
+            if (savedTags) {
+                customTags = JSON.parse(savedTags);
+                
+                // 重新渲染标签
+                renderCustomTags();
+            } else {
+                // 初始化默认标签
+                customTags = [
+                    {
+                        id: 'all',
+                        name: '全部',
+                        color: '#4361ee',
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+                saveTagsToLocalStorage();
+                renderCustomTags();
+            }
+        }
+        
+        // 保存标签到本地存储
+        function saveTagsToLocalStorage() {
+            localStorage.setItem('customTags', JSON.stringify(customTags));
         }
         
         // 从数据库加载任务
@@ -3964,7 +4051,10 @@
         
         // 将任务保存到数据库
         async function saveTaskToDatabase(task) {
-            if (!supabase) return null;
+            if (!supabase) {
+                // 如果没有Supabase，使用本地存储
+                return saveTaskToLocalStorage(task);
+            }
             
             try {
                 const taskData = {
@@ -4005,9 +4095,32 @@
                 return task;
             } catch (error) {
                 console.error('保存任务到数据库失败:', error);
-                showMessage('同步到服务器失败', true);
-                return null;
+                showMessage('同步到服务器失败，使用本地存储', true);
+                return saveTaskToLocalStorage(task);
             }
+        }
+        
+        // 将任务保存到本地存储
+        function saveTaskToLocalStorage(task) {
+            if (!task.id) {
+                task.id = Date.now();
+            }
+            
+            // 查找现有任务
+            const existingIndex = tasks.findIndex(t => t.id === task.id);
+            
+            if (existingIndex !== -1) {
+                // 更新现有任务
+                tasks[existingIndex] = task;
+            } else {
+                // 添加新任务
+                tasks.push(task);
+            }
+            
+            // 保存到本地存储
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            
+            return task;
         }
         
         // 更新数据库中的任务
@@ -4017,7 +4130,10 @@
         
         // 从数据库删除任务
         async function deleteTaskFromDatabase(taskId) {
-            if (!supabase) return false;
+            if (!supabase) {
+                // 如果没有Supabase，使用本地存储
+                return deleteTaskFromLocalStorage(taskId);
+            }
             
             try {
                 const { error } = await supabase
@@ -4033,14 +4149,24 @@
                 return true;
             } catch (error) {
                 console.error('从数据库删除任务失败:', error);
-                showMessage('从服务器删除任务失败', true);
-                return false;
+                showMessage('从服务器删除任务失败，使用本地存储', true);
+                return deleteTaskFromLocalStorage(taskId);
             }
+        }
+        
+        // 从本地存储删除任务
+        function deleteTaskFromLocalStorage(taskId) {
+            tasks = tasks.filter(t => t.id !== taskId);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            return true;
         }
         
         // 保存操作日志到数据库
         async function saveLogToDatabase(logEntry) {
-            if (!supabase) return false;
+            if (!supabase) {
+                // 如果没有Supabase，使用本地存储
+                return saveLogToLocalStorage(logEntry);
+            }
             
             try {
                 const logData = {
@@ -4061,13 +4187,23 @@
                 return true;
             } catch (error) {
                 console.error('保存操作日志到数据库失败:', error);
-                return false;
+                return saveLogToLocalStorage(logEntry);
             }
+        }
+        
+        // 保存操作日志到本地存储
+        function saveLogToLocalStorage(logEntry) {
+            operationLogs.push(logEntry);
+            localStorage.setItem('operationLogs', JSON.stringify(operationLogs));
+            return true;
         }
         
         // 保存标签到数据库
         async function saveTagToDatabase(tag) {
-            if (!supabase) return null;
+            if (!supabase) {
+                // 如果没有Supabase，使用本地存储
+                return saveTagToLocalStorage(tag);
+            }
             
             try {
                 const tagData = {
@@ -4105,14 +4241,40 @@
                 return tag;
             } catch (error) {
                 console.error('保存标签到数据库失败:', error);
-                showMessage('同步标签到服务器失败', true);
-                return null;
+                showMessage('同步标签到服务器失败，使用本地存储', true);
+                return saveTagToLocalStorage(tag);
             }
+        }
+        
+        // 保存标签到本地存储
+        function saveTagToLocalStorage(tag) {
+            if (!tag.id) {
+                tag.id = 'tag_' + Date.now();
+            }
+            
+            // 查找现有标签
+            const existingIndex = customTags.findIndex(t => t.id === tag.id);
+            
+            if (existingIndex !== -1) {
+                // 更新现有标签
+                customTags[existingIndex] = tag;
+            } else {
+                // 添加新标签
+                customTags.push(tag);
+            }
+            
+            // 保存到本地存储
+            saveTagsToLocalStorage();
+            
+            return tag;
         }
         
         // 从数据库删除标签
         async function deleteTagFromDatabase(tagId) {
-            if (!supabase) return false;
+            if (!supabase) {
+                // 如果没有Supabase，使用本地存储
+                return deleteTagFromLocalStorage(tagId);
+            }
             
             try {
                 const { error } = await supabase
@@ -4128,9 +4290,16 @@
                 return true;
             } catch (error) {
                 console.error('从数据库删除标签失败:', error);
-                showMessage('从服务器删除标签失败', true);
-                return false;
+                showMessage('从服务器删除标签失败，使用本地存储', true);
+                return deleteTagFromLocalStorage(tagId);
             }
+        }
+        
+        // 从本地存储删除标签
+        function deleteTagFromLocalStorage(tagId) {
+            customTags = customTags.filter(t => t.id !== tagId);
+            saveTagsToLocalStorage();
+            return true;
         }
         
         // 显示消息
@@ -5477,7 +5646,7 @@
             
             switch (quickFilter) {
                 case 'today':
-                    startDate = today;
+                    startDate = new Date(today);
                     endDate = new Date(today);
                     endDate.setHours(23, 59, 59, 999);
                     break;
@@ -5784,8 +5953,13 @@
         
         // 自定义标签管理
         function loadCustomTags() {
-            // 从数据库加载标签
-            loadTagsFromDatabase();
+            if (supabase) {
+                // 从数据库加载标签
+                loadTagsFromDatabase();
+            } else {
+                // 从本地存储加载标签
+                loadTagsFromLocalStorage();
+            }
         }
         
         function renderCustomTags() {
@@ -5929,6 +6103,7 @@
                 return;
             }
             
+            let savedTag;
             if (editingTagId) {
                 // 更新现有标签
                 const tagIndex = customTags.findIndex(t => t.id === editingTagId);
@@ -5937,7 +6112,7 @@
                     customTags[tagIndex].color = color;
                     
                     // 保存到数据库
-                    const savedTag = await saveTagToDatabase(customTags[tagIndex]);
+                    savedTag = await saveTagToDatabase(customTags[tagIndex]);
                     if (savedTag) {
                         // 记录操作日志
                         logOperation('edit', `编辑标签："${name}"`);
@@ -5952,7 +6127,7 @@
                 };
                 
                 // 保存到数据库
-                const savedTag = await saveTagToDatabase(newTag);
+                savedTag = await saveTagToDatabase(newTag);
                 if (savedTag) {
                     customTags.push(savedTag);
                     
@@ -5961,9 +6136,11 @@
                 }
             }
             
-            // 重新渲染标签
-            renderCustomTags();
-            hideModal('editTagModal');
+            if (savedTag) {
+                // 重新渲染标签
+                renderCustomTags();
+                hideModal('editTagModal');
+            }
         }
         
         async function deleteTag(tagId) {
