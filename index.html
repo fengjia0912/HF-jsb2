@@ -2242,11 +2242,10 @@
                     </div>
                     
                     <!-- 自定义标签管理 -->
-                    <div class="custom-tags-container" id="imageTagsContainer">
-                        <div class="custom-tag active" data-category="all">全部</div>
-                        <!-- 自定义标签将通过JS动态加载 -->
-                        <button class="add-tag-btn" id="addImageTagBtn">+ 添加标签</button>
-                    </div>
+<div class="custom-tags-container" id="imageTagsContainer">
+    <div class="custom-tag active" data-category="all">全部</div>
+    <!-- 自定义标签将通过JS动态加载 -->
+</div>
                     
                     <div class="upload-area" id="uploadArea">
                         <div class="upload-icon">📁</div>
@@ -3031,13 +3030,12 @@
             });
             
             // 自定义标签相关事件
-            document.getElementById('addTagBtn').addEventListener('click', function() {
-                openEditTagModal();
-            });
-            
-            document.getElementById('addImageTagBtn').addEventListener('click', function() {
-                openEditTagModal();
-            });
+// 自定义标签相关事件
+document.getElementById('addTagBtn').addEventListener('click', function() {
+    openEditTagModal();
+});
+
+// 移除重复的addImageTagBtn事件监听，改为在renderCustomTags中动态添加
             
             document.getElementById('closeEditTagModal').addEventListener('click', function() {
                 hideModal('editTagModal')
@@ -4325,57 +4323,65 @@ async function deleteTagFromDatabase(tagId) {
         }
         
         // 从数据库加载任务
-        async function loadTasksFromDatabase() {
-            if (!supabase) return;
-            
-            try {
-                const { data, error } = await supabase
-                    .from('tasks')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-                
-                if (error) {
-                    console.error('加载任务失败:', error);
-                    showMessage('从服务器加载任务失败', true);
-                    return;
-                }
-                
-                // 清空现有任务
-                tasks = [];
-                
-                // 将数据库中的数据转换为应用格式
-                if (data && data.length > 0) {
-                    data.forEach(item => {
-                        const task = {
-                            id: item.id,
-                            text: item.content,
-                            priority: item.priority || 1,
-                            completed: item.completed || false,
-                            quadrant: item.quadrant || 1,
-                            category: item.category || getCategoryByPriority(item.priority || 1),
-                            createdAt: item.created_at
-                        };
-                        tasks.push(task);
-                    });
-                    
-                    // 清空现有任务列表
-                    document.querySelectorAll('.task-list').forEach(list => {
-                        list.innerHTML = '';
-                    });
-                    
-                    // 重新渲染所有任务
-                    tasks.forEach(task => {
-                        renderTask(task);
-                    });
-                    
-                    updateTaskStats();
-                    showMessage('任务已从服务器加载', false);
-                }
-            } catch (error) {
-                console.error('加载任务异常:', error);
-                showMessage('加载过程中发生错误', true);
-            }
+        // 从数据库加载任务
+async function loadTasksFromDatabase() {
+    if (!supabase) return;
+    
+    try {
+        const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.error('加载任务失败:', error);
+            showMessage('从服务器加载任务失败', true);
+            return;
         }
+        
+        // 清空现有任务
+        tasks = [];
+        
+        // 将数据库中的数据转换为应用格式
+        if (data && data.length > 0) {
+            data.forEach(item => {
+                const task = {
+                    id: item.id,
+                    text: item.content,
+                    priority: item.priority || 1,
+                    completed: item.completed || false,
+                    quadrant: item.quadrant || 1,
+                    category: item.category || getCategoryByPriority(item.priority || 1),
+                    createdAt: item.created_at
+                };
+                tasks.push(task);
+            });
+            
+            // 清空现有任务列表
+            document.querySelectorAll('.task-list').forEach(list => {
+                list.innerHTML = '';
+            });
+            document.getElementById('listTasks').innerHTML = '';
+            
+            // 重新渲染所有任务
+            tasks.forEach(task => {
+                renderTask(task);
+            });
+            
+            updateTaskStats();
+            showMessage('任务已从服务器加载', false);
+            
+            // 新增：数据加载完成后应用今天的筛选条件
+            applyDateFilter();
+        } else {
+            // 新增：即使没有任务数据也要应用筛选，确保UI状态正确
+            applyDateFilter();
+        }
+    } catch (error) {
+        console.error('加载任务异常:', error);
+        showMessage('加载过程中发生错误', true);
+    }
+}
         
         // 从数据库加载操作日志
         async function loadLogsFromDatabase() {
@@ -4848,6 +4854,7 @@ function generateUUID() {
         
         // 更新当前日期
         // 更新当前日期 - 修复日期初始化
+// 更新当前日期 - 修复日期初始化
 function updateCurrentDate() {
     const now = new Date();
     const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
@@ -4871,6 +4878,9 @@ function updateCurrentDate() {
     currentFilter.startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     currentFilter.endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     currentFilter.endDate.setHours(23, 59, 59, 999);
+    
+    // 新增：立即应用今天的筛选条件
+    applyDateFilter();
 }
         
         // 切换视图
@@ -6325,145 +6335,142 @@ function resetDateFilter() {
         }
         
         function renderCustomTags() {
-            // 渲染列表视图标签
-            const listTagsContainer = document.getElementById('listTagsContainer');
-            listTagsContainer.innerHTML = '';
-            
-            // 渲染图片管理视图标签
-            const imageTagsContainer = document.getElementById('imageTagsContainer');
-            imageTagsContainer.innerHTML = '';
-            
-            // 添加"全部"标签
-            const allTagList = document.createElement('div');
-            allTagList.className = 'custom-tag active';
-            allTagList.dataset.category = 'all';
-            allTagList.textContent = '全部';
-            allTagList.addEventListener('click', function() {
+    // 渲染列表视图标签
+    const listTagsContainer = document.getElementById('listTagsContainer');
+    listTagsContainer.innerHTML = '';
+    
+    // 渲染图片管理视图标签
+    const imageTagsContainer = document.getElementById('imageTagsContainer');
+    imageTagsContainer.innerHTML = '';
+    
+    // 添加"全部"标签 - 列表视图
+    const allTagList = document.createElement('div');
+    allTagList.className = 'custom-tag active';
+    allTagList.dataset.category = 'all';
+    allTagList.textContent = '全部';
+    allTagList.addEventListener('click', function() {
+        document.querySelectorAll('#listTagsContainer .custom-tag').forEach(t => {
+            t.classList.remove('active');
+        });
+        this.classList.add('active');
+        filterTasksByCategory('all');
+    });
+    listTagsContainer.appendChild(allTagList);
+    
+    // 添加"全部"标签 - 图片视图
+    const allTagImage = document.createElement('div');
+    allTagImage.className = 'custom-tag active';
+    allTagImage.dataset.category = 'all';
+    allTagImage.textContent = '全部';
+    allTagImage.addEventListener('click', function() {
+        document.querySelectorAll('#imageTagsContainer .custom-tag').forEach(t => {
+            t.classList.remove('active');
+        });
+        this.classList.add('active');
+        imageCategoryFilter = 'all';
+        filterImagesByCategory();
+    });
+    imageTagsContainer.appendChild(allTagImage);
+    
+    // 渲染自定义标签
+    customTags.forEach(tag => {
+        // 列表视图标签
+        const listTag = document.createElement('div');
+        listTag.className = 'custom-tag';
+        listTag.dataset.category = tag.id;
+        listTag.style.backgroundColor = tag.color;
+        listTag.style.color = tag.text_color || '#ffffff';
+        
+        listTag.innerHTML = `
+            ${tag.name}
+            <span class="custom-tag-edit" data-id="${tag.id}">✏️</span>
+            <span class="custom-tag-delete" data-id="${tag.id}">🗑️</span>
+        `;
+        
+        listTag.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('custom-tag-edit') && !e.target.classList.contains('custom-tag-delete')) {
                 document.querySelectorAll('#listTagsContainer .custom-tag').forEach(t => {
                     t.classList.remove('active');
                 });
                 this.classList.add('active');
-                filterTasksByCategory('all');
-            });
-            listTagsContainer.appendChild(allTagList);
-            
-            const allTagImage = document.createElement('div');
-            allTagImage.className = 'custom-tag active';
-            allTagImage.dataset.category = 'all';
-            allTagImage.textContent = '全部';
-            allTagImage.addEventListener('click', function() {
+                filterTasksByCategory(tag.id);
+            }
+        });
+        
+        const listEditBtn = listTag.querySelector('.custom-tag-edit');
+        listEditBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openEditTagModal(tag.id);
+        });
+        
+        const listDeleteBtn = listTag.querySelector('.custom-tag-delete');
+        listDeleteBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            deleteTag(tag.id);
+        });
+        
+        listTagsContainer.appendChild(listTag);
+        
+        // 图片管理视图标签
+        const imageTag = document.createElement('div');
+        imageTag.className = 'custom-tag';
+        imageTag.dataset.category = tag.id;
+        imageTag.style.backgroundColor = tag.color;
+        imageTag.style.color = tag.text_color || '#ffffff';
+        
+        imageTag.innerHTML = `
+            ${tag.name}
+            <span class="custom-tag-edit" data-id="${tag.id}">✏️</span>
+            <span class="custom-tag-delete" data-id="${tag.id}">🗑️</span>
+        `;
+        
+        imageTag.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('custom-tag-edit') && !e.target.classList.contains('custom-tag-delete')) {
                 document.querySelectorAll('#imageTagsContainer .custom-tag').forEach(t => {
                     t.classList.remove('active');
                 });
                 this.classList.add('active');
-                imageCategoryFilter = 'all';
+                imageCategoryFilter = tag.id;
                 filterImagesByCategory();
-            });
-            imageTagsContainer.appendChild(allTagImage);
-            
-            customTags.forEach(tag => {
-                // 列表视图标签
-                const listTag = document.createElement('div');
-                listTag.className = 'custom-tag';
-                listTag.dataset.category = tag.id;
-                listTag.style.backgroundColor = tag.color;
-                listTag.style.color = tag.text_color || '#ffffff';
-                
-                listTag.innerHTML = `
-                    ${tag.name}
-                    <span class="custom-tag-edit" data-id="${tag.id}">✏️</span>
-                    <span class="custom-tag-delete" data-id="${tag.id}">🗑️</span>
-                `;
-                
-                listTag.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('custom-tag-edit') && !e.target.classList.contains('custom-tag-delete')) {
-                        // 激活选中的标签
-                        document.querySelectorAll('#listTagsContainer .custom-tag').forEach(t => {
-                            t.classList.remove('active');
-                        });
-                        this.classList.add('active');
-                        
-                        // 筛选任务
-                        filterTasksByCategory(tag.id);
-                    }
-                });
-                
-                const listEditBtn = listTag.querySelector('.custom-tag-edit');
-                listEditBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    openEditTagModal(tag.id);
-                });
-                
-                const listDeleteBtn = listTag.querySelector('.custom-tag-delete');
-                listDeleteBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    deleteTag(tag.id);
-                });
-                
-                listTagsContainer.appendChild(listTag);
-                
-                // 图片管理视图标签
-                const imageTag = document.createElement('div');
-                imageTag.className = 'custom-tag';
-                imageTag.dataset.category = tag.id;
-                imageTag.style.backgroundColor = tag.color;
-                imageTag.style.color = tag.text_color || '#ffffff';
-                
-                imageTag.innerHTML = `
-                    ${tag.name}
-                    <span class="custom-tag-edit" data-id="${tag.id}">✏️</span>
-                    <span class="custom-tag-delete" data-id="${tag.id}">🗑️</span>
-                `;
-                
-                imageTag.addEventListener('click', function(e) {
-                    if (!e.target.classList.contains('custom-tag-edit') && !e.target.classList.contains('custom-tag-delete')) {
-                        // 激活选中的标签
-                        document.querySelectorAll('#imageTagsContainer .custom-tag').forEach(t => {
-                            t.classList.remove('active');
-                        });
-                        this.classList.add('active');
-                        
-                        // 筛选图片
-                        imageCategoryFilter = tag.id;
-                        filterImagesByCategory();
-                    }
-                });
-                
-                const imageEditBtn = imageTag.querySelector('.custom-tag-edit');
-                imageEditBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    openEditTagModal(tag.id);
-                });
-                
-                const imageDeleteBtn = imageTag.querySelector('.custom-tag-delete');
-                imageDeleteBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    deleteTag(tag.id);
-                });
-                
-                imageTagsContainer.appendChild(imageTag);
-            });
-            
-            // 添加"添加标签"按钮
-// 添加"添加标签"按钮 - 修复重复ID问题
-const addListTagBtn = document.createElement('button');
-addListTagBtn.className = 'add-tag-btn';
-addListTagBtn.textContent = '+ 添加标签';
-addListTagBtn.addEventListener('click', function() {
-    openEditTagModal();
-});
-listTagsContainer.appendChild(addListTagBtn);
-            
-            const addImageTagBtn = document.createElement('button');
-            addImageTagBtn.className = 'add-tag-btn';
-            addImageTagBtn.id = 'addImageTagBtn';
-            addImageTagBtn.textContent = '+ 添加标签';
-            addImageTagBtn.addEventListener('click', openEditTagModal);
-            imageTagsContainer.appendChild(addImageTagBtn);
-            
-            // 更新分类选择器
-            updateCategorySelectors();
-        }
+            }
+        });
+        
+        const imageEditBtn = imageTag.querySelector('.custom-tag-edit');
+        imageEditBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openEditTagModal(tag.id);
+        });
+        
+        const imageDeleteBtn = imageTag.querySelector('.custom-tag-delete');
+        imageDeleteBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            deleteTag(tag.id);
+        });
+        
+        imageTagsContainer.appendChild(imageTag);
+    });
+    
+    // 添加"添加标签"按钮 - 列表视图
+    const addListTagBtn = document.createElement('button');
+    addListTagBtn.className = 'add-tag-btn';
+    addListTagBtn.textContent = '+ 添加标签';
+    addListTagBtn.addEventListener('click', function() {
+        openEditTagModal();
+    });
+    listTagsContainer.appendChild(addListTagBtn);
+    
+    // 添加"添加标签"按钮 - 图片视图
+    const addImageTagBtn = document.createElement('button');
+    addImageTagBtn.className = 'add-tag-btn';
+    addImageTagBtn.textContent = '+ 添加标签';
+    addImageTagBtn.addEventListener('click', function() {
+        openEditTagModal();
+    });
+    imageTagsContainer.appendChild(addImageTagBtn);
+    
+    // 更新分类选择器
+    updateCategorySelectors();
+}
         
         function openEditTagModal(tagId = null) {
             editingTagId = tagId;
