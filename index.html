@@ -4847,21 +4847,31 @@ function generateUUID() {
         }
         
         // 更新当前日期
-        function updateCurrentDate() {
-            const now = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
-            
-            // 设置日期选择器默认值
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('startDate').value = today;
-            document.getElementById('endDate').value = today;
-            
-            // 初始化筛选状态
-            currentFilter.startDate = new Date(today);
-            currentFilter.endDate = new Date(today);
-            currentFilter.endDate.setHours(23, 59, 59, 999);
-        }
+        // 更新当前日期 - 修复日期初始化
+function updateCurrentDate() {
+    const now = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+    document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
+    
+    // 修复：使用本地日期格式设置默认值
+    const formatDateForInput = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    const todayStr = formatDateForInput(now);
+    
+    // 设置日期选择器默认值
+    document.getElementById('startDate').value = todayStr;
+    document.getElementById('endDate').value = todayStr;
+    
+    // 初始化筛选状态
+    currentFilter.startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    currentFilter.endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    currentFilter.endDate.setHours(23, 59, 59, 999);
+}
         
         // 切换视图
         function switchView(view) {
@@ -5956,80 +5966,103 @@ function generateUUID() {
         }
         
         // 应用快捷日期筛选
-        function applyQuickFilter() {
-            const quickFilter = document.getElementById('quickDateFilter').value;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            let startDate, endDate;
-            
-            switch (quickFilter) {
-                case 'today':
-                    startDate = today;
-                    endDate = new Date(today);
-                    endDate.setHours(23, 59, 59, 999);
-                    break;
-                case 'yesterday':
-                    startDate = new Date(today);
-                    startDate.setDate(today.getDate() - 1);
-                    endDate = new Date(startDate);
-                    endDate.setHours(23, 59, 59, 999);
-                    break;
-                case 'last7days':
-                    startDate = new Date(today);
-                    startDate.setDate(today.getDate() - 6);
-                    endDate = new Date(today);
-                    endDate.setHours(23, 59, 59, 999);
-                    break;
-                case 'last15days':
-                    startDate = new Date(today);
-                    startDate.setDate(today.getDate() - 14);
-                    endDate = new Date(today);
-                    endDate.setHours(23, 59, 59, 999);
-                    break;
-                case 'last30days':
-                    startDate = new Date(today);
-                    startDate.setDate(today.getDate() - 29);
-                    endDate = new Date(today);
-                    endDate.setHours(23, 59, 59, 999);
-                    break;
-                case 'thismonth':
-                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                    endDate.setHours(23, 59, 59, 999);
-                    break;
-                case 'lastmonth':
-                    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                    endDate = new Date(today.getFullYear(), today.getMonth(), 0);
-                    endDate.setHours(23, 59, 59, 999);
-                    break;
-                case 'thisyear':
-                    startDate = new Date(today.getFullYear(), 0, 1);
-                    endDate = new Date(today.getFullYear(), 11, 31);
-                    endDate.setHours(23, 59, 59, 999);
-                    break;
-                case 'lastyear':
-                    startDate = new Date(today.getFullYear() - 1, 0, 1);
-                    endDate = new Date(today.getFullYear() - 1, 11, 31);
-                    endDate.setHours(23, 59, 59, 999);
-                    break;
-                case 'all':
-                    resetDateFilter();
-                    return;
-            }
-            
-            // 更新UI
-            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
-            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
-            
-            // 更新筛选状态
-            currentFilter.quickFilter = quickFilter;
-            currentFilter.startDate = startDate;
-            currentFilter.endDate = endDate;
-            
-            // 应用筛选
-            applyDateFilter();
-        }
+       // 应用快捷日期筛选 - 修复版
+function applyQuickFilter() {
+    const quickFilter = document.getElementById('quickDateFilter').value;
+    
+    // 创建当前日期（使用本地时间）
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    let startDate, endDate;
+    
+    switch (quickFilter) {
+        case 'today':
+            // 今天：从今天00:00:00到23:59:59
+            startDate = new Date(today);
+            endDate = new Date(today);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'yesterday':
+            // 昨天：从昨天00:00:00到23:59:59
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 1);
+            endDate = new Date(startDate);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'last7days':
+            // 过去7天：包括今天在内的7天
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 6);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(today);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'last15days':
+            // 过去15天：包括今天在内的15天
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 14);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(today);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'last30days':
+            // 过去30天：包括今天在内的30天
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 29);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(today);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'thismonth':
+            // 本月：从本月1号00:00:00到最后一天23:59:59
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'lastmonth':
+            // 上月：从上月1号00:00:00到上月最后一天23:59:59
+            startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'thisyear':
+            // 今年：从今年1月1号00:00:00到12月31号23:59:59
+            startDate = new Date(today.getFullYear(), 0, 1);
+            endDate = new Date(today.getFullYear(), 11, 31);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'lastyear':
+            // 去年：从去年1月1号00:00:00到12月31号23:59:59
+            startDate = new Date(today.getFullYear() - 1, 0, 1);
+            endDate = new Date(today.getFullYear() - 1, 11, 31);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+        case 'all':
+            resetDateFilter();
+            return;
+    }
+    
+    // 修复：使用本地日期格式设置输入框值，避免时区问题
+    const formatDateForInput = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    // 更新UI - 使用修复后的日期格式化
+    document.getElementById('startDate').value = formatDateForInput(startDate);
+    document.getElementById('endDate').value = formatDateForInput(endDate);
+    
+    // 更新筛选状态
+    currentFilter.quickFilter = quickFilter;
+    currentFilter.startDate = startDate;
+    currentFilter.endDate = endDate;
+    
+    // 应用筛选
+    applyDateFilter();
+}
         
         // 应用日期筛选
         function applyDateFilter() {
@@ -6071,21 +6104,36 @@ function generateUUID() {
         }
         
         // 重置日期筛选
-        function resetDateFilter() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('quickDateFilter').value = 'today';
-            document.getElementById('startDate').value = today;
-            document.getElementById('endDate').value = today;
-            
-            // 重置筛选状态
-            currentFilter.quickFilter = 'today';
-            currentFilter.startDate = new Date(today);
-            currentFilter.endDate = new Date(today);
-            currentFilter.endDate.setHours(23, 59, 59, 999);
-            
-            // 应用重置
-            applyDateFilter();
-        }
+        // 重置日期筛选 - 修复版
+function resetDateFilter() {
+    // 使用本地时间创建今天的日期
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    
+    const formatDateForInput = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    const todayStr = formatDateForInput(today);
+    
+    document.getElementById('quickDateFilter').value = 'today';
+    document.getElementById('startDate').value = todayStr;
+    document.getElementById('endDate').value = todayStr;
+    
+    // 重置筛选状态
+    currentFilter.quickFilter = 'today';
+    currentFilter.startDate = new Date(today);
+    currentFilter.endDate = new Date(today);
+    currentFilter.endDate.setHours(23, 59, 59, 999);
+    
+    // 应用重置
+    applyDateFilter();
+}
         
         // 记录操作日志
         async function logOperation(type, content) {
