@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>何峰-专用记事本</title>
     <!-- 添加网站图标 -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234361ee'/><text x='50' y='65' font-family='Arial, sans-serif' font-size='40' text-anchor='middle' fill='white' font-weight='bold'>HF</text></svg>">
+ <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 98 98'><rect width='98' height='98' fill='%234361ee'/><text x='49' y='65' font-family='Arial, sans-serif' font-size='55' text-anchor='middle' fill='white' font-weight='bold'>HF</text></svg>">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS 客户端 -->
@@ -2583,8 +2583,7 @@
 
     <!-- 消息提示区 -->
     <div id="message"></div>
-
-    <script src="config.js"></script>
+  <script src="config.js"></script>
     <script>
         // 初始化变量
         let tasks = [];
@@ -2858,13 +2857,7 @@
             // 登录表单事件
             document.getElementById('loginForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                const password = document.getElementById('password').value;
-                const savedPassword = localStorage.getItem('userPassword') || '6858'; // 默认密码
-                if (password === savedPassword) {
-                    loginSuccess();
-                } else {
-                    alert('密码错误，请重新输入');
-                }
+                handleLogin();
             });
             
             // 修改密码按钮事件
@@ -2883,36 +2876,7 @@
             
             // 保存新密码
             document.getElementById('saveNewPassword').addEventListener('click', function() {
-                const currentPassword = document.getElementById('currentPassword').value;
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
-                
-                const savedPassword = localStorage.getItem('userPassword') || '6858'; // 默认密码
-                
-                if (currentPassword !== savedPassword) {
-                    alert('当前密码不正确');
-                    return;
-                }
-                
-                if (newPassword !== confirmPassword) {
-                    alert('新密码和确认密码不匹配');
-                    return;
-                }
-                
-                if (newPassword.length < 4) {
-                    alert('密码长度不能少于4位');
-                    return;
-                }
-                
-                localStorage.setItem('userPassword', newPassword);
-                alert('密码修改成功，请使用新密码登录');
-                hideModal('changePasswordModal');
-                document.getElementById('currentPassword').value = '';
-                document.getElementById('newPassword').value = '';
-                document.getElementById('confirmPassword').value = '';
-                
-                // 记录操作日志
-                logOperation('system', '用户修改了登录密码');
+                handlePasswordChange();
             });
             
             // 退出登录按钮事件
@@ -3076,7 +3040,14 @@
             });
             
             document.getElementById('closeEditTagModal').addEventListener('click', function() {
-                hideModal('editTagModal');
+                hideModal('editTagModal')
+// 重置编辑状态
+editingTagId = null;
+
+// 清空表单
+document.getElementById('editTagName').value = '';
+document.getElementById('editTagColor').value = '#4361ee';
+document.getElementById('editTagTextColor').value = '#ffffff';;
             });
             
             document.getElementById('cancelEditTag').addEventListener('click', function() {
@@ -3086,7 +3057,28 @@
             document.getElementById('saveEditTag').addEventListener('click', function() {
                 saveEditedTag();
             });
-            
+            // 从数据库删除标签
+async function deleteTagFromDatabase(tagId) {
+    if (!supabase) return false;
+    
+    try {
+        const { error } = await supabase
+            .from('tags')
+            .delete()
+            .eq('id', tagId);
+        
+        if (error) {
+            throw error;
+        }
+        
+        showMessage('标签已从云端删除', false);
+        return true;
+    } catch (error) {
+        console.error('从数据库删除标签失败:', error);
+        showMessage('从服务器删除标签失败: ' + error.message, true);
+        return false;
+    }
+}
             // 文件夹相关事件
             document.getElementById('createFolderBtn').addEventListener('click', function() {
                 openEditFolderModal();
@@ -3482,30 +3474,8 @@
         
         // 文件夹管理功能
         function loadFolders() {
-            const savedFolders = localStorage.getItem('folders');
-            if (savedFolders) {
-                folders = JSON.parse(savedFolders);
-            } else {
-                // 初始化默认文件夹
-                folders = [
-                    {
-                        id: 'default',
-                        name: '默认文件夹',
-                        description: '系统默认文件夹',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                        imageCount: 0,
-                        totalSize: 0
-                    }
-                ];
-                saveFolders();
-            }
-            
-            renderFolders();
-        }
-        
-        function saveFolders() {
-            localStorage.setItem('folders', JSON.stringify(folders));
+            // 从数据库加载文件夹
+            loadFoldersFromDatabase();
         }
         
         function renderFolders() {
@@ -3718,7 +3688,8 @@
                 folder.totalSize = folderImages.reduce((total, img) => total + (img.size || 0), 0);
                 folder.updatedAt = new Date().toISOString();
                 
-                saveFolders();
+                // 保存到数据库
+                saveFolderToDatabase(folder);
                 renderFolders();
             }
         }
@@ -3744,7 +3715,7 @@
             showModal('editFolderModal');
         }
         
-        function saveEditedFolder() {
+        async function saveEditedFolder() {
             const name = document.getElementById('editFolderName').value.trim();
             const description = document.getElementById('editFolderDescription').value.trim();
             
@@ -3753,6 +3724,8 @@
                 return;
             }
             
+            let savedFolder;
+            
             if (editingFolderId) {
                 // 更新现有文件夹
                 const folderIndex = folders.findIndex(f => f.id === editingFolderId);
@@ -3760,31 +3733,39 @@
                     folders[folderIndex].name = name;
                     folders[folderIndex].description = description;
                     folders[folderIndex].updatedAt = new Date().toISOString();
+                    
+                    // 保存到数据库
+                    savedFolder = await saveFolderToDatabase(folders[folderIndex]);
                 }
             } else {
                 // 创建新文件夹
-                const newId = 'folder_' + Date.now();
-                folders.push({
-                    id: newId,
+                const newFolder = {
                     name: name,
                     description: description,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                     imageCount: 0,
                     totalSize: 0
-                });
+                };
+                
+                // 保存到数据库
+                savedFolder = await saveFolderToDatabase(newFolder);
+                if (savedFolder) {
+                    folders.push(savedFolder);
+                }
             }
             
-            saveFolders();
-            renderFolders();
-            updateFolderSelectors();
-            hideModal('editFolderModal');
-            
-            // 记录操作日志
-            logOperation('system', `${editingFolderId ? '编辑' : '创建'}文件夹："${name}"`);
+            if (savedFolder) {
+                renderFolders();
+                updateFolderSelectors();
+                hideModal('editFolderModal');
+                
+                // 记录操作日志
+                logOperation('system', `${editingFolderId ? '编辑' : '创建'}文件夹："${name}"`);
+            }
         }
         
-        function deleteFolder(folderId) {
+        async function deleteFolder(folderId) {
             if (folderId === 'default') {
                 alert('默认文件夹不能删除');
                 return;
@@ -3796,14 +3777,21 @@
             const confirmDelete = confirm(`确定要删除文件夹"${folder.name}"吗？`);
             if (!confirmDelete) return;
             
+            // 首先从数据库删除文件夹
+            const dbSuccess = await deleteFolderFromDatabase(folderId);
+            if (!dbSuccess) {
+                alert('从数据库删除文件夹失败');
+                return;
+            }
+            
             const deleteImages = confirm('是否同时删除文件夹内的所有图片？');
             
             if (deleteImages) {
                 // 删除文件夹及其内部图片
                 const folderImages = images.filter(img => img.folder === folderId);
-                folderImages.forEach(img => {
-                    deleteImageFromDatabase(img.id);
-                });
+                for (const img of folderImages) {
+                    await deleteImageFromDatabase(img.id);
+                }
                 
                 // 从图片数组中移除
                 images = images.filter(img => img.folder !== folderId);
@@ -3815,19 +3803,16 @@
                 logOperation('delete', `删除文件夹"${folder.name}"及其内部${folderImages.length}张图片`);
             } else {
                 // 仅删除文件夹，将图片移动到默认文件夹
-                images.forEach(img => {
-                    if (img.folder === folderId) {
-                        img.folder = 'default';
-                        saveImageToDatabase(img);
-                    }
-                });
+                for (const img of images.filter(img => img.folder === folderId)) {
+                    img.folder = 'default';
+                    await saveImageToDatabase(img);
+                }
                 
                 logOperation('delete', `删除文件夹"${folder.name}"，图片已移动到默认文件夹`);
             }
             
             // 从文件夹数组中移除
             folders = folders.filter(f => f.id !== folderId);
-            saveFolders();
             renderFolders();
             updateFolderSelectors();
             
@@ -3847,6 +3832,12 @@
             const imageFolderSelect = document.getElementById('editImageFolder');
             imageFolderSelect.innerHTML = '';
             
+            // 添加默认文件夹选项
+            const defaultOption = document.createElement('option');
+            defaultOption.value = 'default';
+            defaultOption.textContent = '默认文件夹';
+            imageFolderSelect.appendChild(defaultOption);
+            
             folders.forEach(folder => {
                 const option = document.createElement('option');
                 option.value = folder.id;
@@ -3864,6 +3855,289 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 初始化Supabase
+        function initSupabase() {
+            try {
+                // 从数据库获取Supabase配置
+                getSupabaseConfig().then(config => {
+                    if (config && config.SUPABASE_URL && config.SUPABASE_ANON_KEY) {
+                        supabase = window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+                        console.log('Supabase初始化成功');
+                        loadTasksFromDatabase();
+                        loadLogsFromDatabase();
+                        loadImagesFromDatabase();
+                        loadTagsFromDatabase();
+                        loadFoldersFromDatabase();
+                    } else {
+                        console.warn('Supabase配置未设置');
+                        showMessage('数据库连接配置缺失，部分功能可能无法使用', true);
+                    }
+                });
+            } catch (error) {
+                console.error('Supabase初始化失败:', error);
+                showMessage('连接服务器失败', true);
+            }
+        }
+        
+        // 从数据库获取Supabase配置
+        async function getSupabaseConfig() {
+            // 直接使用config.js中定义的全局变量
+            if (typeof window.supabaseConfig !== 'undefined') {
+                console.log('使用config.js中的Supabase配置');
+                return window.supabaseConfig;
+            }
+            
+            // 如果config.js没有加载，返回null
+            console.error('supabaseConfig未定义，请检查config.js文件是否已加载');
+            return null;
+        }
+        
+        // 从数据库加载文件夹
+        async function loadFoldersFromDatabase() {
+            if (!supabase) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('folders')
+                    .select('*')
+                    .order('created_at', { ascending: true });
+                
+                if (error) {
+                    console.error('加载文件夹失败:', error);
+                    showMessage('从服务器加载文件夹失败', true);
+                    return;
+                }
+                
+                // 清空现有文件夹
+                folders = [];
+                
+                // 将数据库中的数据转换为应用格式
+                if (data && data.length > 0) {
+                    data.forEach(item => {
+                        const folder = {
+                            id: item.id,
+                            name: item.name,
+                            description: item.description,
+                            createdAt: item.created_at,
+                            updatedAt: item.updated_at,
+                            imageCount: item.image_count || 0,
+                            totalSize: item.total_size || 0
+                        };
+                        folders.push(folder);
+                    });
+                    
+                    renderFolders();
+                    updateFolderSelectors();
+                    showMessage('文件夹已从服务器加载', false);
+                } else {
+                    // 如果没有文件夹，创建默认文件夹
+                    createDefaultFolder();
+                }
+            } catch (error) {
+                console.error('加载文件夹异常:', error);
+                showMessage('加载文件夹过程中发生错误', true);
+            }
+        }
+        
+        // 创建默认文件夹
+        async function createDefaultFolder() {
+            const defaultFolder = {
+                name: '默认文件夹',
+                description: '系统默认文件夹',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                imageCount: 0,
+                totalSize: 0
+            };
+            
+            const savedFolder = await saveFolderToDatabase(defaultFolder);
+            if (savedFolder) {
+                folders.push(savedFolder);
+                renderFolders();
+                updateFolderSelectors();
+            }
+        }
+        
+        // 保存单个文件夹到数据库
+        async function saveFolderToDatabase(folder) {
+            if (!supabase) return null;
+            
+            try {
+                const folderData = {
+                    name: folder.name,
+                    description: folder.description,
+                    created_at: folder.createdAt,
+                    updated_at: folder.updatedAt,
+                    image_count: folder.imageCount,
+                    total_size: folder.totalSize
+                };
+                
+                let result;
+                if (folder.id && !folder.id.startsWith('folder_')) {
+                    // 更新现有文件夹
+                    result = await supabase
+                        .from('folders')
+                        .update(folderData)
+                        .eq('id', folder.id)
+                        .select();
+                } else {
+                    // 创建新文件夹
+                    result = await supabase
+                        .from('folders')
+                        .insert([folderData])
+                        .select();
+                    
+                    // 获取新创建的文件夹ID
+                    if (result.data && result.data.length > 0) {
+                        folder.id = result.data[0].id;
+                    }
+                }
+                
+                if (result.error) {
+                    throw result.error;
+                }
+                
+                showMessage('文件夹已保存到云端', false);
+                return folder;
+            } catch (error) {
+                console.error('保存文件夹到数据库失败:', error);
+                showMessage('同步文件夹到服务器失败', true);
+                return null;
+            }
+        }
+        
+        // 从数据库删除文件夹
+        async function deleteFolderFromDatabase(folderId) {
+            if (!supabase) return false;
+            
+            try {
+                const { error } = await supabase
+                    .from('folders')
+                    .delete()
+                    .eq('id', folderId);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                showMessage('文件夹已从云端删除', false);
+                return true;
+            } catch (error) {
+                console.error('从数据库删除文件夹失败:', error);
+                showMessage('从服务器删除文件夹失败', true);
+                return false;
+            }
+        }
+        
+        // 处理登录
+        async function handleLogin() {
+            const password = document.getElementById('password').value;
+            
+            try {
+                // 从数据库验证密码
+                const isValid = await verifyPassword(password);
+                if (isValid) {
+                    loginSuccess();
+                } else {
+                    alert('密码错误，请重新输入');
+                }
+            } catch (error) {
+                console.error('登录验证失败:', error);
+                alert('登录验证失败，请重试');
+            }
+        }
+        
+        // 验证密码
+        async function verifyPassword(password) {
+            if (!supabase) return false;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('passwords')
+                    .select('*')
+                    .eq('type', 'login')
+                    .single();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // 这里应该使用安全的密码验证方法，如bcrypt
+                // 为了简化，这里使用简单的比较
+                return data && data.value === password;
+            } catch (error) {
+                console.error('验证密码失败:', error);
+                return false;
+            }
+        }
+        
+        // 处理密码修改
+        async function handlePasswordChange() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            try {
+                // 验证当前密码
+                const isValid = await verifyPassword(currentPassword);
+                if (!isValid) {
+                    alert('当前密码不正确');
+                    return;
+                }
+                
+                if (newPassword !== confirmPassword) {
+                    alert('新密码和确认密码不匹配');
+                    return;
+                }
+                
+                if (newPassword.length < 4) {
+                    alert('密码长度不能少于4位');
+                    return;
+                }
+                
+                // 更新密码
+                const success = await updatePassword(newPassword);
+                if (success) {
+                    alert('密码修改成功，请使用新密码登录');
+                    hideModal('changePasswordModal');
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                    
+                    // 记录操作日志
+                    logOperation('system', '用户修改了登录密码');
+                } else {
+                    alert('密码修改失败，请重试');
+                }
+            } catch (error) {
+                console.error('修改密码失败:', error);
+                alert('修改密码失败，请重试');
+            }
+        }
+        
+        // 更新密码
+        async function updatePassword(newPassword) {
+            if (!supabase) return false;
+            
+            try {
+                // 这里应该使用安全的密码哈希方法，如bcrypt
+                // 为了简化，这里直接存储明文密码（不推荐）
+                const { error } = await supabase
+                    .from('passwords')
+                    .update({ value: newPassword })
+                    .eq('type', 'login');
+                
+                if (error) {
+                    throw error;
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('更新密码失败:', error);
+                return false;
+            }
         }
         
         // 保存图片到数据库
@@ -4050,26 +4324,6 @@
             }
         }
         
-        // 初始化Supabase
-        function initSupabase() {
-            try {
-                if (window.supabaseConfig && window.supabaseConfig.SUPABASE_URL && window.supabaseConfig.SUPABASE_ANON_KEY) {
-                    supabase = window.supabase.createClient(window.supabaseConfig.SUPABASE_URL, window.supabaseConfig.SUPABASE_ANON_KEY);
-                    console.log('Supabase初始化成功');
-                    loadTasksFromDatabase();
-                    loadLogsFromDatabase();
-                    loadImagesFromDatabase();
-                    loadTagsFromDatabase();
-                } else {
-                    console.warn('Supabase配置未设置');
-                    showMessage('数据库连接配置缺失，部分功能可能无法使用', true);
-                }
-            } catch (error) {
-                console.error('Supabase初始化失败:', error);
-                showMessage('连接服务器失败', true);
-            }
-        }
-        
         // 从数据库加载任务
         async function loadTasksFromDatabase() {
             if (!supabase) return;
@@ -4163,47 +4417,42 @@
         }
         
         // 从数据库加载标签
-        async function loadTagsFromDatabase() {
-            if (!supabase) return;
-            
-            try {
-                const { data, error } = await supabase
-                    .from('tags')
-                    .select('*')
-                    .order('created_at', { ascending: true });
-                
-                if (error) {
-                    console.error('加载标签失败:', error);
-                    showMessage('从服务器加载标签失败', true);
-                    return;
-                }
-                
-                // 清空现有标签
-                customTags = [];
-                
-                // 将数据库中的数据转换为应用格式
-                if (data && data.length > 0) {
-                    data.forEach(item => {
-                        const tag = {
-                            id: item.id,
-                            name: item.name,
-                            color: item.color,
-                            text_color: item.text_color || '#ffffff',
-                            createdAt: item.created_at
-                        };
-                        customTags.push(tag);
-                    });
-                    
-                    // 重新渲染标签
-                    renderCustomTags();
-                    
-                    showMessage('标签已从服务器加载', false);
-                }
-            } catch (error) {
-                console.error('加载标签异常:', error);
-                showMessage('加载标签过程中发生错误', true);
-            }
+        // 从数据库加载标签
+async function loadTagsFromDatabase() {
+    if (!supabase) return;
+    
+    try {
+        const { data, error } = await supabase
+            .from('tags')
+            .select('*')
+            .order('created_at', { ascending: true });
+        
+        if (error) {
+            throw error;
         }
+        
+        customTags = [];
+        
+        if (data && data.length > 0) {
+            data.forEach(item => {
+                const tag = {
+                    id: item.id,
+                    name: item.name,
+                    color: item.color || '#4361ee',
+                    text_color: item.text_color || '#ffffff',
+                    createdAt: item.created_at
+                };
+                customTags.push(tag);
+            });
+            
+            renderCustomTags();
+            showMessage('标签已从服务器加载', false);
+        }
+    } catch (error) {
+        console.error('加载标签异常:', error);
+        showMessage('加载标签失败: ' + error.message, true);
+    }
+}
         
         // 将任务保存到数据库
         async function saveTaskToDatabase(task) {
@@ -4309,74 +4558,68 @@
         }
         
         // 保存标签到数据库
-        async function saveTagToDatabase(tag) {
-            if (!supabase) return null;
-            
-            try {
-                const tagData = {
-                    name: tag.name,
-                    color: tag.color,
-                    text_color: tag.text_color,
-                    created_at: tag.createdAt || new Date().toISOString()
-                };
-                
-                let result;
-                if (tag.id) {
-                    // 更新现有标签
-                    result = await supabase
-                        .from('tags')
-                        .update(tagData)
-                        .eq('id', tag.id)
-                        .select();
-                } else {
-                    // 创建新标签
-                    result = await supabase
-                        .from('tags')
-                        .insert([tagData])
-                        .select();
-                    
-                    // 获取新创建的标签ID
-                    if (result.data && result.data.length > 0) {
-                        tag.id = result.data[0].id;
-                    }
-                }
-                
-                if (result.error) {
-                    throw result.error;
-                }
-                
-                showMessage('标签已保存到云端', false);
-                return tag;
-            } catch (error) {
-                console.error('保存标签到数据库失败:', error);
-                showMessage('同步标签到服务器失败', true);
-                return null;
-            }
+        // 保存标签到数据库
+// 保存标签到数据库
+// 保存标签到数据库
+async function saveTagToDatabase(tag) {
+    if (!supabase) {
+        console.error('Supabase未初始化，无法保存标签');
+        throw new Error('数据库连接失败');
+    }
+    
+    try {
+        const tagData = {
+            name: tag.name,
+            color: tag.color || '#4361ee',
+            text_color: tag.text_color || '#ffffff',
+            created_at: tag.createdAt || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        
+        let result;
+        
+        if (tag.id && tag.id !== 'all') {
+            // 更新现有标签
+            result = await supabase
+                .from('tags')
+                .update(tagData)
+                .eq('id', tag.id)
+                .select();
+        } else {
+            // 创建新标签 - 生成UUID作为ID
+            tagData.id = generateUUID();
+            result = await supabase
+                .from('tags')
+                .insert([tagData])
+                .select();
         }
         
-        // 从数据库删除标签
-        async function deleteTagFromDatabase(tagId) {
-            if (!supabase) return false;
-            
-            try {
-                const { error } = await supabase
-                    .from('tags')
-                    .delete()
-                    .eq('id', tagId);
-                
-                if (error) {
-                    throw error;
-                }
-                
-                showMessage('标签已从云端删除', false);
-                return true;
-            } catch (error) {
-                console.error('从数据库删除标签失败:', error);
-                showMessage('从服务器删除标签失败', true);
-                return false;
-            }
+        if (result.error) {
+            console.error('保存标签错误:', result.error);
+            throw result.error;
         }
         
+        if (result.data && result.data.length > 0) {
+            tag.id = result.data[0].id;
+        }
+        
+        showMessage('标签已保存到云端', false);
+        return tag;
+    } catch (error) {
+        console.error('保存标签到数据库失败:', error);
+        showMessage('同步标签到服务器失败: ' + error.message, true);
+        throw error;
+    }
+}
+
+// 生成UUID函数
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
         // 显示消息
         function showMessage(text, isError = false) {
             const message = document.getElementById('message');
@@ -6042,10 +6285,38 @@
             const imageTagsContainer = document.getElementById('imageTagsContainer');
             imageTagsContainer.innerHTML = '';
             
+            // 添加"全部"标签
+            const allTagList = document.createElement('div');
+            allTagList.className = 'custom-tag active';
+            allTagList.dataset.category = 'all';
+            allTagList.textContent = '全部';
+            allTagList.addEventListener('click', function() {
+                document.querySelectorAll('#listTagsContainer .custom-tag').forEach(t => {
+                    t.classList.remove('active');
+                });
+                this.classList.add('active');
+                filterTasksByCategory('all');
+            });
+            listTagsContainer.appendChild(allTagList);
+            
+            const allTagImage = document.createElement('div');
+            allTagImage.className = 'custom-tag active';
+            allTagImage.dataset.category = 'all';
+            allTagImage.textContent = '全部';
+            allTagImage.addEventListener('click', function() {
+                document.querySelectorAll('#imageTagsContainer .custom-tag').forEach(t => {
+                    t.classList.remove('active');
+                });
+                this.classList.add('active');
+                imageCategoryFilter = 'all';
+                filterImagesByCategory();
+            });
+            imageTagsContainer.appendChild(allTagImage);
+            
             customTags.forEach(tag => {
                 // 列表视图标签
                 const listTag = document.createElement('div');
-                listTag.className = 'custom-tag' + (tag.id === 'all' ? ' active' : '');
+                listTag.className = 'custom-tag';
                 listTag.dataset.category = tag.id;
                 listTag.style.backgroundColor = tag.color;
                 listTag.style.color = tag.text_color || '#ffffff';
@@ -6085,7 +6356,7 @@
                 
                 // 图片管理视图标签
                 const imageTag = document.createElement('div');
-                imageTag.className = 'custom-tag' + (tag.id === 'all' ? ' active' : '');
+                imageTag.className = 'custom-tag';
                 imageTag.dataset.category = tag.id;
                 imageTag.style.backgroundColor = tag.color;
                 imageTag.style.color = tag.text_color || '#ffffff';
@@ -6126,12 +6397,14 @@
             });
             
             // 添加"添加标签"按钮
-            const addListTagBtn = document.createElement('button');
-            addListTagBtn.className = 'add-tag-btn';
-            addListTagBtn.id = 'addTagBtn';
-            addListTagBtn.textContent = '+ 添加标签';
-            addListTagBtn.addEventListener('click', openEditTagModal);
-            listTagsContainer.appendChild(addListTagBtn);
+// 添加"添加标签"按钮 - 修复重复ID问题
+const addListTagBtn = document.createElement('button');
+addListTagBtn.className = 'add-tag-btn';
+addListTagBtn.textContent = '+ 添加标签';
+addListTagBtn.addEventListener('click', function() {
+    openEditTagModal();
+});
+listTagsContainer.appendChild(addListTagBtn);
             
             const addImageTagBtn = document.createElement('button');
             addImageTagBtn.className = 'add-tag-btn';
@@ -6167,80 +6440,105 @@
             showModal('editTagModal');
         }
         
-        async function saveEditedTag() {
-            const name = document.getElementById('editTagName').value.trim();
-            const color = document.getElementById('editTagColor').value;
-            const textColor = document.getElementById('editTagTextColor').value;
-            
-            if (!name) {
-                alert('请输入标签名称');
-                return;
-            }
-            
-            if (editingTagId) {
-                // 更新现有标签
-                const tagIndex = customTags.findIndex(t => t.id === editingTagId);
-                if (tagIndex !== -1) {
-                    customTags[tagIndex].name = name;
-                    customTags[tagIndex].color = color;
-                    customTags[tagIndex].text_color = textColor;
-                    
-                    // 保存到数据库
-                    const savedTag = await saveTagToDatabase(customTags[tagIndex]);
-                    if (savedTag) {
-                        // 记录操作日志
-                        logOperation('edit', `编辑标签："${name}"`);
-                    }
-                }
-            } else {
-                // 添加新标签
-                const newTag = {
-                    name: name,
-                    color: color,
-                    text_color: textColor,
-                    createdAt: new Date().toISOString()
-                };
+async function saveEditedTag() {
+    const name = document.getElementById('editTagName').value.trim();
+    const color = document.getElementById('editTagColor').value;
+    const textColor = document.getElementById('editTagTextColor').value;
+    
+    if (!name) {
+        alert('请输入标签名称');
+        return;
+    }
+    
+    try {
+        let savedTag;
+        
+        if (editingTagId) {
+            // 更新现有标签
+            const tagIndex = customTags.findIndex(t => t.id === editingTagId);
+            if (tagIndex !== -1) {
+                customTags[tagIndex].name = name;
+                customTags[tagIndex].color = color;
+                customTags[tagIndex].text_color = textColor;
                 
-                // 保存到数据库
-                const savedTag = await saveTagToDatabase(newTag);
-                if (savedTag) {
-                    customTags.push(savedTag);
-                    
-                    // 记录操作日志
-                    logOperation('add', `添加标签："${name}"`);
-                }
+                savedTag = await saveTagToDatabase(customTags[tagIndex]);
+                logOperation('edit', `编辑标签："${name}"`);
             }
+        } else {
+            // 添加新标签
+            const newTag = {
+                name: name,
+                color: color,
+                text_color: textColor,
+                createdAt: new Date().toISOString()
+            };
             
-            // 重新渲染标签
-            renderCustomTags();
-            hideModal('editTagModal');
+            savedTag = await saveTagToDatabase(newTag);
+            if (savedTag) {
+                customTags.push(savedTag);
+                logOperation('add', `添加标签："${name}"`);
+            }
         }
         
-        async function deleteTag(tagId) {
-            if (tagId === 'all') {
-                alert('"全部"标签不能删除');
-                return;
-            }
-            
-            const tag = customTags.find(t => t.id === tagId);
-            if (!tag) return;
-            
-            const confirmDelete = confirm(`确定要删除标签"${tag.name}"吗？`);
-            if (!confirmDelete) return;
-            
-            // 从数据库删除
-            const success = await deleteTagFromDatabase(tagId);
-            if (success) {
-                // 从本地数组中移除
-                customTags = customTags.filter(t => t.id !== tagId);
-                
-                // 重新渲染标签
-                renderCustomTags();
-                
-                // 记录操作日志
-                logOperation('delete', `删除标签："${tag.name}"`);
-            }
+        if (savedTag) {
+            renderCustomTags();
+            updateCategorySelectors();
+            hideModal('editTagModal');
+            editingTagId = null;
         }
+        
+    } catch (error) {
+        console.error('保存标签失败:', error);
+        alert('保存标签失败: ' + error.message);
+    }
+}
+   // 从数据库删除标签
+async function deleteTagFromDatabase(tagId) {
+    if (!supabase) return false;
+    
+    try {
+        const { error } = await supabase
+            .from('tags')
+            .delete()
+            .eq('id', tagId);
+        
+        if (error) {
+            throw error;
+        }
+        
+        showMessage('标签已从云端删除', false);
+        return true;
+    } catch (error) {
+        console.error('从数据库删除标签失败:', error);
+        showMessage('从服务器删除标签失败: ' + error.message, true);
+        return false;
+    }
+}     
+async function deleteTag(tagId) {
+    if (tagId === 'all') {
+        alert('"全部"标签不能删除');
+        return;
+    }
+    
+    const tag = customTags.find(t => t.id === tagId);
+    if (!tag) return;
+    
+    const confirmDelete = confirm(`确定要删除标签"${tag.name}"吗？`);
+    if (!confirmDelete) return;
+    
+    // 从数据库删除
+    const success = await deleteTagFromDatabase(tagId);
+    if (success) {
+        // 从本地数组中移除
+        customTags = customTags.filter(t => t.id !== tagId);
+        
+        // 重新渲染标签
+        renderCustomTags();
+        
+        // 记录操作日志
+        logOperation('delete', `删除标签："${tag.name}"`);
+    }
+}
         
         function getCategoryNameById(categoryId) {
             const tag = customTags.find(t => t.id === categoryId);
